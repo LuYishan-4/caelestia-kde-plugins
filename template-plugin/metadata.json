@@ -1,0 +1,16 @@
+{
+  "id": "template-plugin",
+  "name": "Template Plugin",
+  "description": "A starting point for new Caelestia plugins. Copy this folder into plugins/, rename it, and fill in your metadata.",
+  "version": "0.1.0",
+  "type": "quickshell",
+  "author": {
+    "name": "Your Name",
+    "url": "https://github.com/your-username"
+  },
+  "license": "GPL-3.0-or-later",
+  "keywords": ["template", "example"],
+  "shell-compat": {
+    "min": "2.3"
+  }
+}

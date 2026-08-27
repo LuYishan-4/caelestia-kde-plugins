@@ -1,0 +1,143 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/ladybug-me/caelestia-kde-plugins/blob/main/schemas/plugin.schema.json",
+  "title": "Caelestia plugin manifest",
+  "description": "metadata.json for a single plugin in the Caelestia community plugin store. Each plugin lives in its own folder under plugins/; the folder name is the plugin's immutable id.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "description", "version", "type", "author", "license"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique plugin id. Must equal the plugin folder name: lowercase letters, digits, single hyphens.",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "minLength": 2,
+      "maxLength": 64
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable plugin name.",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "description": {
+      "type": "string",
+      "description": "Short description shown in the store.",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "version": {
+      "type": "string",
+      "description": "Semver version: MAJOR.MINOR.PATCH, optionally with -prerelease and/or +build.",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+    },
+    "type": {
+      "description": "Kind of plugin. The set is extended by the maintainers as the shell gains capabilities.",
+      "enum": ["quickshell", "kwineffect", "theme"]
+    },
+    "author": {
+      "description": "Plugin author. Either a name string or an object with optional contact info.",
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name"],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "email": {
+              "type": "string",
+              "format": "email"
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        }
+      ]
+    },
+    "license": {
+      "type": "string",
+      "description": "SPDX license id for this plugin. Must match the LICENSE file in the plugin folder.",
+      "minLength": 1
+    },
+    "icon": {
+      "type": "string",
+      "description": "Path to an icon file, relative to the plugin folder (e.g. icon.png)."
+    },
+    "screenshots": {
+      "type": "array",
+      "description": "Paths to screenshot files, relative to the plugin folder.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "homepage": {
+      "type": "string",
+      "description": "Project homepage. Use a full URL with scheme.",
+      "format": "uri"
+    },
+    "repository": {
+      "type": "string",
+      "description": "Source repository URL. Use a full URL with scheme.",
+      "format": "uri"
+    },
+    "shell-compat": {
+      "type": "object",
+      "description": "Caelestia shell versions this plugin supports.",
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "type": "string",
+          "description": "Minimum supported shell version (e.g. 2.3)."
+        },
+        "max": {
+          "type": "string",
+          "description": "Maximum supported shell version (e.g. 2.4)."
+        }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "description": "Ids of other plugins this plugin depends on.",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "kwineffect": {
+      "type": "object",
+      "description": "Extra metadata for type 'kwineffect'.",
+      "additionalProperties": false,
+      "required": ["kpluginId"],
+      "properties": {
+        "kpluginId": {
+          "type": "string",
+          "description": "The KWin plugin id (X-KDE-PluginInfo-Name) this effect registers."
+        }
+      }
+    },
+    "deprecated": {
+      "type": "boolean",
+      "description": "true = keep serving to existing installs but stop recommending for new installs.",
+      "default": false
+    },
+    "replacement": {
+      "type": "string",
+      "description": "Id of the plugin that replaces this one (used with deprecated: true)."
+    }
+  }
+}
