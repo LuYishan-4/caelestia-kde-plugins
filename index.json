@@ -1,6 +1,28 @@
 {
   "format": "caelestia-plugin-index",
   "version": 1,
-  "generated": "2026-08-28T13:22:08Z",
-  "plugins": []
+  "generated": "2026-08-28T21:25:35Z",
+  "plugins": [
+    {
+      "id": "wallpaper-selector",
+      "path": "plugins/wallpaper-selector",
+      "name": "Wallpaper Selector",
+      "description": "Full-screen wallpaper selector with glassmorphism UI.",
+      "version": "1.0.0",
+      "type": "quickshell",
+      "author": {
+        "name": "ladybug-me",
+        "url": "https://github.com/ladybug-me"
+      },
+      "license": "GPL-3.0-or-later",
+      "keywords": [
+        "wallpaper",
+        "selector",
+        "glassmorphism"
+      ],
+      "shell-compat": {
+        "min": "2.3"
+      }
+    }
+  ]
 }
