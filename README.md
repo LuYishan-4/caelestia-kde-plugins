@@ -1,10 +1,10 @@
 # Caelestia Community Plugin Store
 
-> The official community appstore for [Caelestia](https://github.com/ladybug-me/caelestia-dots-kde) - the KDE Plasma 6 desktop shell.
+A community plugin store for [Caelestia](https://github.com/ladybug-me/caelestia-dots-kde), the KDE Plasma 6 desktop shell.
 
-This repository is a machine-readable store of plugins for the Caelestia desktop shell. Each folder under [`plugins/`](plugins/) is one plugin. Plugins are contributed by the community via pull requests; every change is validated by CI and reviewed by a maintainer before it is merged.
+Each folder under [`plugins/`](plugins/) is one plugin, contributed via pull request. CI checks the structure and a maintainer reviews every change before it merges.
 
-> ⚠️ Security note - Plugins are third-party code that runs on your machine with the privileges of the desktop shell. This store is source-only: compiled binaries and archives are rejected by CI, and every change is human-reviewed. Still, only install plugins you trust. See [SECURITY.md](SECURITY.md).
+Plugins are third-party code running with the same privileges as the desktop shell. Only source is accepted here - CI rejects compiled binaries and archives - and every change is reviewed by a human. Even so, only install plugins you trust. See [SECURITY.md](SECURITY.md) for more.
 
 ## Repository layout
 
@@ -22,7 +22,7 @@ This repository is a machine-readable store of plugins for the Caelestia desktop
 
 ## Adding a plugin
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). In short:
+See [CONTRIBUTING.md](CONTRIBUTING.md). Short version:
 
 1. Fork this repository.
 2. Copy `template-plugin/` to `plugins/<your-plugin-id>/` and fill it in.
@@ -30,12 +30,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). In short:
 
 ## Consumers
 
-Programs that want to read this store should follow [`docs/ingestion-contract.md`](docs/ingestion-contract.md) - either clone the repository and read each `metadata.json`, or fetch the generated `index.json` with a single request.
+If you're writing a program that reads this store, follow [`docs/ingestion-contract.md`](docs/ingestion-contract.md). Either clone the repo and read each `metadata.json`, or fetch `index.json` in a single request.
 
 ## Maintainers
 
 - [@ladybug-me](https://github.com/ladybug-me)
+- [@0xSolanaceae](https://github.com/0xSolanaceae)
 
 ## License
 
-The repository's infrastructure (docs, scripts, schemas, workflows) is licensed under the GPL-3.0 - see [`LICENSE`](LICENSE). Each plugin folder is licensed independently under the license declared in its own `LICENSE` file and `metadata.json`.
+The repository's infrastructure (docs, scripts, schemas, workflows) is GPL-3.0 licensed - see [`LICENSE`](LICENSE). Each plugin folder is licensed independently, under whatever its own `LICENSE` file and `metadata.json` declare.
