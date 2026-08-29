@@ -2,6 +2,7 @@
   "id": "template-plugin",
   "name": "Template Plugin",
   "description": "A starting point for new Caelestia plugins. Copy this folder into plugins/, rename it, and fill in your metadata.",
+  "icon": "default",
   "mediaurl": "media.gif",
   "version": "0.1.0",
   "type": "quickshell",
