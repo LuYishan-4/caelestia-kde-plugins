@@ -183,8 +183,17 @@ def validate_plugin(plugin_dir, schema):
     if not (plugin_dir / "LICENSE").is_file():
         problems.append(f"plugin '{plugin_id}': missing required LICENSE file")
 
-    if meta.get("icon"):
-        problems.extend(check_referenced_file(plugin_dir, plugin_id, "icon", meta["icon"]))
+    icon = meta.get("icon")
+    if icon:
+        if icon != "default":
+            icon_path = Path(icon)
+            if icon_path.is_absolute() or ".." in icon_path.parts:
+                problems.append(
+                    f"plugin '{plugin_id}': icon path {icon!r} must be relative and "
+                    "stay inside the plugin folder unless it is the special 'default' value"
+                )
+            elif "/" in icon or "\\" in icon or icon_path.suffix:
+                problems.extend(check_referenced_file(plugin_dir, plugin_id, "icon", icon))
     for value in meta.get("screenshots", []) or []:
         problems.extend(check_referenced_file(plugin_dir, plugin_id, "screenshots", value))
 

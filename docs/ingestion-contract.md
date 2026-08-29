@@ -26,7 +26,8 @@ Validated against [`schemas/plugin.schema.json`](../schemas/plugin.schema.json) 
 | `type` | yes | string | `quickshell` \| `kwineffect` \| `theme`. |
 | `author` | yes | string \| object | `name` required; optional `email`, `url`. |
 | `license` | yes | string | SPDX id. |
-| `icon` | no | string | Path relative to the plugin folder (e.g. `icon.png`). |
+| `mediaurl` | no | string | **Images / Animations**: `.png, .jpg, .jpeg, .gif, .webp, .svg` **Videos**: `.mp4, .webm, .mkv` **Sources**: Relative path, absolute path (/path/...), or HTTP/HTTPS URL |
+| `icon` | no | string | **Images / Animations**: `.png, .jpg, .jpeg, .gif, .svg, .webp` **Icons**: Material Symbols ligature name (e.g. `"restart_alt"`,` "settings"`) **Fallback**: `"default"` or empty sets to "extension" **Sources**: Relative path, absolute path (/path/...), or HTTP/HTTPS URL |
 | `screenshots` | no | array of string | Paths relative to the plugin folder. |
 | `keywords` | no | array of string | |
 | `homepage` | no | string (URI) | Full URL with scheme. |

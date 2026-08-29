@@ -68,6 +68,10 @@
       "description": "SPDX license id for this plugin. Must match the LICENSE file in the plugin folder.",
       "minLength": 1
     },
+    "mediaurl": {
+      "type": "string",
+      "description": "Optional media preview for the plugin. Accepts a web URL, an absolute local path, or a path relative to the plugin folder."
+    },
     "icon": {
       "type": "string",
       "description": "Path to an icon file, relative to the plugin folder (e.g. icon.png)."
