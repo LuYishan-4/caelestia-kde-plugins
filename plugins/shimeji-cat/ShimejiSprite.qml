@@ -3,13 +3,14 @@ import QtQuick
 Item {
     id: root
 
-    required property var screenSize
+    required property rect playArea
     required property string spriteDir
 
-    readonly property real floorY: screenSize.height - 128
-    readonly property real minX: 0
-    readonly property real maxX: screenSize.width - 128
-    readonly property real maxY: screenSize.height - 128
+    readonly property real minX: playArea.x
+    readonly property real maxX: playArea.x + playArea.width - 128
+    readonly property real minY: playArea.y
+    readonly property real floorY: playArea.y + playArea.height - 128
+    readonly property real maxY: playArea.y + playArea.height - 128
 
     property real vx: 0
     property real vy: 0
@@ -43,7 +44,7 @@ Item {
 
     function walkRandom() {
         const margin = 100;
-        walkTarget = margin + Math.random() * (screenSize.width - 128 - margin * 2);
+        walkTarget = minX + margin + Math.random() * Math.max(0, maxX - minX - margin * 2);
         currentAnim = "walk";
         facingRight = walkTarget > root.x;
         frameIndex = 0;
@@ -118,8 +119,8 @@ Item {
             } else {
                 onGround = false;
             }
-        } else if (root.y < 0) {
-            root.y = 0;
+        } else if (root.y < minY) {
+            root.y = minY;
             vy = Math.abs(vy) * 0.6;
         }
     }
@@ -131,7 +132,7 @@ Item {
 
     Component.onCompleted: {
         const margin = 50;
-        x = margin + Math.random() * (screenSize.width - 128 - margin * 2);
+        x = minX + margin + Math.random() * Math.max(0, maxX - minX - margin * 2);
         y = floorY;
         onGround = true;
         vx = 0;
@@ -179,7 +180,7 @@ Item {
         onPositionChanged: mouse => {
             if (dragging) {
                 const newX = Math.max(minX, Math.min(maxX, root.x + mouse.x - dragOffset.x));
-                const newY = Math.max(0, Math.min(maxY, root.y + mouse.y - dragOffset.y));
+                const newY = Math.max(minY, Math.min(maxY, root.y + mouse.y - dragOffset.y));
                 dragVx = newX - lastX;
                 dragVy = newY - lastY;
                 lastX = newX;

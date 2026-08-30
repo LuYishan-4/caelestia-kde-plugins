@@ -2,6 +2,8 @@ import QtQuick
 import QtQml
 import Quickshell
 import Quickshell.Wayland
+import Caelestia.Config
+import qs.services
 
 PanelWindow {
     id: root
@@ -14,6 +16,23 @@ PanelWindow {
     property string spritePath: "sprites/"
     // Number of cats on this screen.
     property int petCount: 1
+
+    // The shell's taskbar, so the cat walks on top of it instead of under it.
+    // Falls back to the full screen when no bar is registered for this screen.
+    readonly property var barWrapper: Visibilities.bars.get(root.screen.name)
+    readonly property int barThickness: barWrapper ? barWrapper.visualThickness : 0
+    readonly property rect playArea: {
+        const t = barThickness;
+        const w = root.screen.width;
+        const h = root.screen.height;
+        switch (Config.bar.position) {
+            case "left": return Qt.rect(t, 0, w - t, h);
+            case "right": return Qt.rect(0, 0, w - t, h);
+            case "top": return Qt.rect(0, t, w, h - t);
+            case "bottom": return Qt.rect(0, 0, w, h - t);
+            default: return Qt.rect(0, 0, w, h);
+        }
+    }
 
     screen: modelData
     color: "transparent"
@@ -64,7 +83,7 @@ PanelWindow {
             model: root.petCount > 0 ? root.petCount : 1
 
             ShimejiSprite {
-                screenSize: Qt.size(root.screen.width, root.screen.height)
+                playArea: root.playArea
                 spriteDir: root.spriteDir
             }
         }
