@@ -197,7 +197,7 @@ Item {
         anchors.fill: parent
         source: {
             const fn = root.animFrame(currentAnim, frameIndex);
-            return fn ? "file://" + spriteDir + fn : "";
+            return fn ? spriteDir + fn : "";
         }
         sourceSize.width: 128
         sourceSize.height: 128

@@ -8,7 +8,10 @@ PanelWindow {
 
     required property var modelData
 
-    property string spritePath: "root:/assets/shimeji/pusheen/"
+    // Directory holding the sprite frames. The default points at the frames
+    // bundled with this plugin (resolved relative to this folder). Override
+    // with a "root:/..." path, a "~/..." path, or an absolute path.
+    property string spritePath: "sprites/"
     // Number of cats on this screen.
     property int petCount: 1
 
@@ -34,17 +37,23 @@ PanelWindow {
         return "";
     }
 
-    readonly property string spriteDir: {
+    function resolveSpriteDir() {
         let dir = spritePath;
         if (dir.startsWith("root:/")) {
             dir = shellBase() + "/" + dir.substring("root:/".length);
         } else if (dir.startsWith("~/")) {
             dir = (Quickshell.env("HOME") || "") + dir.substring(1);
         }
+        // Absolute filesystem paths become file URLs; relative paths stay
+        // relative so QtQuick.Image resolves them against this plugin folder.
+        if (dir.startsWith("/"))
+            dir = "file://" + dir;
         if (dir && !dir.endsWith("/"))
             dir += "/";
         return dir;
     }
+
+    readonly property string spriteDir: resolveSpriteDir()
 
     Item {
         id: spriteContainer
