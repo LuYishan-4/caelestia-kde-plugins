@@ -121,9 +121,8 @@ GridView {
         }
 
         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-            if (root.currentIndex >= 0 && root.model && root.currentIndex < root.model.length) {
-                var app = root.model[root.currentIndex]
-                if (app) root.wallpaperSelected(app.path)
+            if (root.currentItem) {
+                root.wallpaperSelected(root.currentItem._path)
             }
             event.accepted = true
             return
@@ -142,6 +141,9 @@ GridView {
     }
 
     delegate: Rectangle {
+        required property var modelData
+        required property int index
+        
         width: Config.gridThumbWidth
         height: Config.gridThumbHeight
         radius: 6
@@ -151,6 +153,7 @@ GridView {
         clip: true
 
         readonly property bool _preferGlyph: false
+        readonly property string _path: modelData.path
 
         CachingImage {
             anchors.fill: parent
@@ -202,5 +205,14 @@ GridView {
                 root.wallpaperSelected(modelData.path)
             }
         }
+    }
+    
+    Text {
+        anchors.centerIn: parent
+        z: 999
+        text: "ThumbGrid Items: " + root.count + " Size: " + root.width + "x" + root.height + " Cell: " + root.cellWidth + "x" + root.cellHeight
+        color: "red"
+        font.pixelSize: 24
+        visible: true
     }
 }

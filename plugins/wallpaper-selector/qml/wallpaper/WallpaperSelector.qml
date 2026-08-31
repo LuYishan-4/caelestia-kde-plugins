@@ -451,9 +451,14 @@ PanelWindow {
         onAppendSearchText: text => topSearchBar.appendSearchText(text)
         onBackspaceSearchText: () => topSearchBar.backspaceSearchText()
         onInteractionStarted: interactionBlockerTimer.restart()
-    }
+        
+        }
 
-    Views.ThumbGridView {
+    Views.TestDumper {
+            modelObject: appWallpaper.wallpaperResults
+        }
+        
+        Views.ThumbGridView {
         id: thumbGridView
         visible: appWallpaper.cardVisible && appWallpaper.isGridMode
         anchors.top: cardContainer.top
@@ -466,7 +471,7 @@ PanelWindow {
         focus: appWallpaper.showing && visible
         
         colors: appWallpaper.colors
-        model: appWallpaper.cardVisible && appWallpaper.isGridMode ? appWallpaper.wallpaperResults.values : null
+        model: appWallpaper.cardVisible && appWallpaper.isGridMode ? appWallpaper.wallpaperResults : null
         
         onCycleNext: step => appWallpaper.cycleNext(step)
         onCyclePrev: step => appWallpaper.cyclePrev(step)

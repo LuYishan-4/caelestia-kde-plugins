@@ -191,35 +191,40 @@ Item {
                 // --- Slice Settings ---
                 Common.SectionHeader { text: "Slice Mode" }
                 
-                SettingsSlider {
+                SettingsStepper {
                     label: "Inactive Width"
+                    subtext: "Width of background items"
                     first: true
-                    from: 50; to: 400; stepSize: 5
+                    actualFrom: 50; actualTo: 400
                     actualValue: Config.sliceWidth
                     onUpdated: val => Config.saveKey("components.appWallpaper.sliceWidth", val)
                 }
-                SettingsSlider {
+                SettingsStepper {
                     label: "Expanded Width"
-                    from: 400; to: 1600; stepSize: 10
+                    subtext: "Width of active item"
+                    actualFrom: 400; actualTo: 1600
                     actualValue: Config.expandedWidth
                     onUpdated: val => Config.saveKey("components.appWallpaper.expandedWidth", val)
                 }
-                SettingsSlider {
+                SettingsStepper {
                     label: "Height"
-                    from: 200; to: 1000; stepSize: 10
+                    subtext: "Height of all items"
+                    actualFrom: 200; actualTo: 1000
                     actualValue: Config.sliceHeight
                     onUpdated: val => Config.saveKey("components.appWallpaper.sliceHeight", val)
                 }
-                SettingsSlider {
+                SettingsStepper {
                     label: "Skew Offset"
-                    from: -150; to: 150; stepSize: 5
+                    subtext: "Slant angle of items"
+                    actualFrom: -150; actualTo: 150
                     actualValue: Config.skewOffset
                     onUpdated: val => Config.saveKey("components.appWallpaper.skewOffset", val)
                 }
-                SettingsSlider {
+                SettingsStepper {
                     label: "Spacing"
+                    subtext: "Gap between items"
                     last: true
-                    from: -100; to: 100; stepSize: 2
+                    actualFrom: -100; actualTo: 100
                     actualValue: Config.sliceSpacing
                     onUpdated: val => Config.saveKey("components.appWallpaper.sliceSpacing", val)
                 }
@@ -227,29 +232,33 @@ Item {
                 // --- Hex Settings ---
                 Common.SectionHeader { text: "Hex Mode" }
                 
-                SettingsSlider {
+                SettingsStepper {
                     label: "Hex Radius"
+                    subtext: "Size of hexagons"
                     first: true
-                    from: 50; to: 300; stepSize: 5
+                    actualFrom: 50; actualTo: 300
                     actualValue: Config.hexRadius
                     onUpdated: val => Config.saveKey("components.appWallpaper.hexRadius", val)
                 }
-                SettingsSlider {
+                SettingsStepper {
                     label: "Rows"
-                    from: 1; to: 10; stepSize: 1
+                    subtext: "Rows in hex grid"
+                    actualFrom: 1; actualTo: 10
                     actualValue: Config.hexRows
-                    onUpdated: val => Config.saveKey("components.appWallpaper.hexRows", val)
+                    onUpdated: val => Config.saveKey("components.appWallpaper.hexRows", Math.round(val))
                 }
-                SettingsSlider {
+                SettingsStepper {
                     label: "Columns"
-                    from: 1; to: 20; stepSize: 1
+                    subtext: "Columns in hex grid"
+                    actualFrom: 1; actualTo: 20
                     actualValue: Config.hexCols
-                    onUpdated: val => Config.saveKey("components.appWallpaper.hexCols", val)
+                    onUpdated: val => Config.saveKey("components.appWallpaper.hexCols", Math.round(val))
                 }
-                SettingsSlider {
+                SettingsStepper {
                     label: "Arc Intensity"
+                    subtext: "Hex layout curvature"
                     last: true
-                    from: 0.0; to: 3.0; stepSize: 0.1
+                    actualFrom: 0.0; actualTo: 3.0
                     actualValue: Config.hexArcIntensity
                     onUpdated: val => Config.saveKey("components.appWallpaper.hexArcIntensity", val)
                 }
@@ -257,29 +266,33 @@ Item {
                 // --- Grid Settings ---
                 Common.SectionHeader { text: "Grid Mode" }
                 
-                SettingsSlider {
+                SettingsStepper {
                     label: "Columns"
+                    subtext: "Number of columns"
                     first: true
-                    from: 1; to: 15; stepSize: 1
+                    actualFrom: 1; actualTo: 15
                     actualValue: Config.gridColumns
-                    onUpdated: val => Config.saveKey("components.appWallpaper.gridColumns", val)
+                    onUpdated: val => Config.saveKey("components.appWallpaper.gridColumns", Math.round(val))
                 }
-                SettingsSlider {
+                SettingsStepper {
                     label: "Rows"
-                    from: 1; to: 10; stepSize: 1
+                    subtext: "Number of rows"
+                    actualFrom: 1; actualTo: 10
                     actualValue: Config.gridRows
-                    onUpdated: val => Config.saveKey("components.appWallpaper.gridRows", val)
+                    onUpdated: val => Config.saveKey("components.appWallpaper.gridRows", Math.round(val))
                 }
-                SettingsSlider {
+                SettingsStepper {
                     label: "Thumbnail Width"
-                    from: 100; to: 800; stepSize: 10
+                    subtext: "Item width"
+                    actualFrom: 100; actualTo: 800
                     actualValue: Config.gridThumbWidth
                     onUpdated: val => Config.saveKey("components.appWallpaper.gridThumbWidth", val)
                 }
-                SettingsSlider {
+                SettingsStepper {
                     label: "Thumbnail Height"
+                    subtext: "Item height"
                     last: true
-                    from: 50; to: 600; stepSize: 10
+                    actualFrom: 50; actualTo: 600
                     actualValue: Config.gridThumbHeight
                     onUpdated: val => Config.saveKey("components.appWallpaper.gridThumbHeight", val)
                 }
@@ -289,21 +302,25 @@ Item {
         }
     }
     
-    // Inline wrapper to normalize our min/max into 0..1 for the SliderRow
-    component SettingsSlider : Common.SliderRow {
-        property real from: 0
-        property real to: 100
-        property real stepSize: 1
+    component SettingsStepper : Common.StepperRow {
+        property real actualFrom: 0
+        property real actualTo: 100
         property real actualValue: 0
         
         signal updated(real val)
         
-        value: Math.max(0.0, Math.min(1.0, (actualValue - from) / (to - from)))
-        valueLabel: Number(actualValue).toFixed(stepSize < 1 ? 1 : 0)
+        from: 0
+        to: 100
+        stepSize: 1
         
-        onInteraction: function(v) {
-            var val = from + v * (to - from)
-            val = Math.round(val / stepSize) * stepSize
+        value: {
+            if (actualTo === actualFrom) return 0
+            var ratio = (actualValue - actualFrom) / (actualTo - actualFrom)
+            return Math.round(Math.max(0.0, Math.min(1.0, ratio)) * 100)
+        }
+        
+        onMoved: function(v) {
+            var val = actualFrom + (v / 100.0) * (actualTo - actualFrom)
             updated(val)
         }
     }
