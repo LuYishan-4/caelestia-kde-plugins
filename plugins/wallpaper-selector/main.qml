@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import qs.services.api
 import qs.services
+import "qml"
 
 import "qml" as PluginStyle
 import "qml/wallpaper" as WallpaperQml
@@ -14,8 +15,11 @@ Scope {
     property bool showing: false
     property string activeScreen: ""
 
-    Component.onCompleted: {
-        CaelestiaApi.shortcuts.register("wallpaper_selector", "Toggle Wallpaper Selector", "Meta+Shift+E", () => {
+    property int settingsOpenCount: 0
+    signal closeSettingsRequested()
+
+    function registerShortcut() {
+        CaelestiaApi.shortcuts.register("wallpaper_selector", "Toggle Wallpaper Selector", Config.shortcut, () => {
             if (!root.showing) {
                 if (typeof CaelestiaApi.windows.kwin !== "undefined" && CaelestiaApi.windows.kwin) {
                     root.activeScreen = CaelestiaApi.windows.kwin.cursorOutputName() || "";
@@ -24,9 +28,22 @@ Scope {
                 }
                 root.showing = true;
             } else {
-                root.showing = false;
+                if (root.settingsOpenCount > 0) {
+                    root.closeSettingsRequested()
+                } else {
+                    root.showing = false;
+                }
             }
         });
+    }
+
+    Component.onCompleted: registerShortcut()
+
+    Connections {
+        target: Config
+        function onShortcutChanged() {
+            registerShortcut()
+        }
     }
 
     Variants {

@@ -48,8 +48,32 @@ PanelWindow {
       if (topSearchBar.text !== "") {
           topSearchBar.text = ""
       }
-      Qt.callLater(function() { gc() })
     }
+  }
+
+  function closeRequested() {
+      if (typeof settingsPanel !== "undefined" && settingsPanel.showing) {
+          settingsPanel.showing = false;
+      } else {
+          appWallpaper.showing = false;
+      }
+  }
+
+  Connections {
+      target: typeof settingsPanel !== "undefined" ? settingsPanel : null
+      function onShowingChanged() {
+          if (settingsPanel.showing) root.settingsOpenCount++
+          else root.settingsOpenCount--
+      }
+  }
+
+  Connections {
+      target: root
+      function onCloseSettingsRequested() {
+          if (typeof settingsPanel !== "undefined") {
+              settingsPanel.showing = false
+          }
+      }
   }
 
   Timer {
@@ -260,7 +284,7 @@ PanelWindow {
 
   MouseArea {
     anchors.fill: parent
-    onClicked: appWallpaper.showing = false
+    onClicked: appWallpaper.closeRequested()
   }
 
   Item {
@@ -316,10 +340,21 @@ PanelWindow {
                 if (currentView.currentIndex >= 0 && appWallpaper.wallpaperResults.values && currentView.currentIndex < appWallpaper.wallpaperResults.values.length) {
                     var wall = appWallpaper.wallpaperResults.values ? appWallpaper.wallpaperResults.values[currentView.currentIndex] : null
                     CaelestiaApi.visuals.wallpaper.setWallpaper(wall.path)
-                    appWallpaper.showing = false
+                    appWallpaper.closeRequested()
                 }
             }
-            onEscapePressed: appWallpaper.showing = false
+            onEscapePressed: appWallpaper.closeRequested()
+        }
+
+        IconButton {
+            id: floatingSettingsBtn
+            icon: "settings"
+            type: IconButton.Tonal
+            anchors.left: topSearchBar.right
+            anchors.leftMargin: 16
+            anchors.verticalCenter: topSearchBar.verticalCenter
+            z: 11
+            onClicked: settingsPanel.showing = !settingsPanel.showing
         }
 
         Rectangle {
@@ -370,7 +405,7 @@ PanelWindow {
         onCyclePrev: step => appWallpaper.cyclePrev(step)
         onWallpaperSelected: path => {
             CaelestiaApi.visuals.wallpaper.setWallpaper(path)
-            appWallpaper.showing = false
+            appWallpaper.closeRequested()
         }
         onCurrentIndexChanged: {
             if (currentIndex >= 0 && appWallpaper.wallpaperResults.values && currentIndex < appWallpaper.wallpaperResults.values.length) {
@@ -378,7 +413,7 @@ PanelWindow {
                 if (wall) CaelestiaApi.visuals.wallpaper.preview(wall.path)
             }
         }
-        onEscapePressed: appWallpaper.showing = false
+        onEscapePressed: appWallpaper.closeRequested()
         onAppendSearchText: text => topSearchBar.appendSearchText(text)
         onBackspaceSearchText: () => topSearchBar.backspaceSearchText()
         onInteractionStarted: interactionBlockerTimer.restart()
@@ -403,7 +438,7 @@ PanelWindow {
         onCyclePrev: step => appWallpaper.cyclePrev(step)
         onWallpaperSelected: path => {
             CaelestiaApi.visuals.wallpaper.setWallpaper(path)
-            appWallpaper.showing = false
+            appWallpaper.closeRequested()
         }
         onCurrentIndexChanged: {
             if (currentIndex >= 0 && appWallpaper.wallpaperResults.values && currentIndex < appWallpaper.wallpaperResults.values.length) {
@@ -411,7 +446,7 @@ PanelWindow {
                 if (wall) CaelestiaApi.visuals.wallpaper.preview(wall.path)
             }
         }
-        onEscapePressed: appWallpaper.showing = false
+        onEscapePressed: appWallpaper.closeRequested()
         onAppendSearchText: text => topSearchBar.appendSearchText(text)
         onBackspaceSearchText: () => topSearchBar.backspaceSearchText()
         onInteractionStarted: interactionBlockerTimer.restart()
@@ -436,7 +471,7 @@ PanelWindow {
         onCyclePrev: step => appWallpaper.cyclePrev(step)
         onWallpaperSelected: path => {
             CaelestiaApi.visuals.wallpaper.setWallpaper(path)
-            appWallpaper.showing = false
+            appWallpaper.closeRequested()
         }
         onCurrentIndexChanged: {
             if (currentIndex >= 0 && appWallpaper.wallpaperResults.values && currentIndex < appWallpaper.wallpaperResults.values.length) {
@@ -444,7 +479,7 @@ PanelWindow {
                 if (wall) CaelestiaApi.visuals.wallpaper.preview(wall.path)
             }
         }
-        onEscapePressed: appWallpaper.showing = false
+        onEscapePressed: appWallpaper.closeRequested()
         onAppendSearchText: text => topSearchBar.appendSearchText(text)
         onBackspaceSearchText: () => topSearchBar.backspaceSearchText()
         onInteractionStarted: interactionBlockerTimer.restart()
@@ -457,6 +492,13 @@ PanelWindow {
         anchors.horizontalCenter: parent.horizontalCenter
         visible: appWallpaper.cardVisible
         z: 11
+    }
+
+    Components.SettingsPanel {
+        id: settingsPanel
+        anchors.fill: parent
+        z: 99
+        colors: appWallpaper.colors
     }
 
     FocusScope {
@@ -472,7 +514,7 @@ PanelWindow {
 
         Keys.onPressed: function(event) {
             if (event.key === Qt.Key_Escape) {
-                appWallpaper.showing = false
+                appWallpaper.closeRequested()
                 event.accepted = true
                 return
             }
@@ -494,7 +536,7 @@ PanelWindow {
                 if (currentView.currentIndex >= 0 && appWallpaper.wallpaperResults.values && currentView.currentIndex < appWallpaper.wallpaperResults.values.length) {
                     var app = appWallpaper.wallpaperResults.values ? appWallpaper.wallpaperResults.values[currentView.currentIndex] : null
                     CaelestiaApi.visuals.wallpaper.setWallpaper(app.path)
-                    appWallpaper.showing = false
+                    appWallpaper.closeRequested()
                 }
                 event.accepted = true
                 return
@@ -510,6 +552,7 @@ PanelWindow {
                 return
             }
         }
+
 
         HoverHandler {
             acceptedDevices: PointerDevice.AllDevices

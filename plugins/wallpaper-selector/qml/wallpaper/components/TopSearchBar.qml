@@ -14,21 +14,22 @@ StyledRect {
 
     signal escapePressed()
     signal accepted()
+    signal settingsClicked()
 
-    color: Qt.rgba(colors.surface.r, colors.surface.g, colors.surface.b, 0.95)
-    border.width: 1
-    border.color: colors.outline
-    radius: ShellConfig.Tokens.rounding.full
-    implicitWidth: searchIcon.implicitWidth + searchInput.width + ShellConfig.Tokens.padding.medium * 2 + ShellConfig.Tokens.spacing.small
+    color: Qt.rgba(colors.secondaryContainer.r, colors.secondaryContainer.g, colors.secondaryContainer.b, 0.95)
+    radius: ShellConfig.Tokens.rounding.large
+    implicitWidth: searchIcon.implicitWidth + searchInput.width + ShellConfig.Tokens.padding.medium * 3 + ShellConfig.Tokens.spacing.small
     implicitHeight: searchInput.implicitHeight
 
-    MaterialIcon {
+    Text {
         id: searchIcon
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: parent.left
         anchors.leftMargin: ShellConfig.Tokens.padding.medium
-        text: "search"
+        text: "\uF002"
         color: colors.surfaceText
+        font.family: "Symbols Nerd Font"
+        font.pixelSize: 16
     }
 
     StyledTextField {

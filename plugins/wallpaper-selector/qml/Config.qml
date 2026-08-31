@@ -26,10 +26,38 @@ QtObject {
         onFileChanged: { reload(); config._reparse() }
     }
 
+    function _mergeConfig(target, source) {
+        var changed = false;
+        for (var key in source) {
+            if (source.hasOwnProperty(key)) {
+                if (typeof source[key] === 'object' && source[key] !== null && !Array.isArray(source[key])) {
+                    if (typeof target[key] !== 'object' || target[key] === null || Array.isArray(target[key])) {
+                        target[key] = {};
+                        changed = true;
+                    }
+                    if (_mergeConfig(target[key], source[key])) {
+                        changed = true;
+                    }
+                } else if (target[key] === undefined) {
+                    target[key] = source[key];
+                    changed = true;
+                }
+            }
+        }
+        return changed;
+    }
+
     function _reparse() {
         var raw = _configFile.text() || ""
         if (!raw) return
-        try { config._data = JSON.parse(raw) } catch (e) {}
+        try { 
+            var parsed = JSON.parse(raw)
+            var changed = _mergeConfig(parsed, defaultConfig)
+            config._data = parsed
+            if (changed) {
+                _configWriter.setText(JSON.stringify(parsed, null, 2) + "\n")
+            }
+        } catch (e) {}
     }
 
 
@@ -50,6 +78,7 @@ QtObject {
 
 
     property var _wallpaper: _data.components?.appWallpaper ?? {}
+    readonly property string shortcut: _wallpaper.shortcut ?? "Meta+Shift+W"
     readonly property string displayMode: _wallpaper.displayMode ?? "slice"
     readonly property int sliceWidth: _wallpaper.sliceWidth ?? 135
     readonly property int expandedWidth: _wallpaper.expandedWidth ?? 924
@@ -120,6 +149,7 @@ QtObject {
         },
         components: {
             appWallpaper: {
+                shortcut: "Meta+Shift+W",
                 displayMode: "slice",
                 sliceWidth: 135,
                 expandedWidth: 924,
@@ -149,6 +179,14 @@ QtObject {
             }
         }
     })
+
+    function resetToDefault() {
+        var jsonStr = JSON.stringify(defaultConfig, null, 2)
+        _configWriter.setText(jsonStr + "\n")
+        
+        // Temporarily reset properties until reparse catches up
+        try { config._data = JSON.parse(jsonStr) } catch (e) {}
+    }
 
     Component.onCompleted: {
         var jsonStr = JSON.stringify(defaultConfig, null, 2)
