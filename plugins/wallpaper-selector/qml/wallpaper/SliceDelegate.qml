@@ -78,8 +78,10 @@ Item {
             var h = delegateItem.height
             if (h <= 0 || w <= 0) return false
             var t = point.y / h
-            var leftX = delegateItem._topLeft * (1.0 - t) + delegateItem._botLeft * t
-            var rightX = delegateItem._topRight * (1.0 - t) + delegateItem._botRight * t
+            var margin = delegateItem.isCurrent ? 0 : 25 // 25px offset deadzone
+            var leftX = delegateItem._topLeft * (1.0 - t) + delegateItem._botLeft * t + margin
+            var rightX = delegateItem._topRight * (1.0 - t) + delegateItem._botRight * t - margin
+            if (rightX < leftX) return false // guard against extremely thin items
             return point.x >= leftX && point.x <= rightX && point.y >= 0 && point.y <= h
         }
     }
@@ -255,14 +257,17 @@ Item {
         cursorShape: Qt.PointingHandCursor
         acceptedButtons: Qt.LeftButton
         
-        
-        onPositionChanged: {
+        onPositionChanged: function(mouse) {
             if (appWallpaper.blockHover) return
             if (delegateItem._listView && delegateItem._listView.currentIndex !== delegateItem.index) {
-                delegateItem._listView.currentIndex = delegateItem.index
+                if (hitMask.contains(Qt.point(mouse.x, mouse.y))) {
+                    delegateItem._listView.interactionStarted()
+                    delegateItem._listView.currentIndex = delegateItem.index
+                }
             }
         }
-        onClicked: {
+        onClicked: function(mouse) {
+            if (!hitMask.contains(Qt.point(mouse.x, mouse.y))) return
             if (delegateItem.isCurrent) {
                 delegateItem.activated(delegateItem.modelData)
             } else if (delegateItem._listView) {

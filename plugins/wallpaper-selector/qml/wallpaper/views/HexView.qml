@@ -200,8 +200,11 @@ ListView {
                 opacity: hexCol._colScale < 0.01 ? 0 : 1
 
                 onHoverSelected: {
-                    root._selectedCol = hexCol.colIdx
-                    root._selectedRow = rowIdx
+                    if (root._selectedCol !== hexCol.colIdx || root._selectedRow !== rowIdx) {
+                        root.interactionStarted()
+                        root._selectedCol = hexCol.colIdx
+                        root._selectedRow = rowIdx
+                    }
                 }
                 onActivated: function(item) {
                     if (item) {

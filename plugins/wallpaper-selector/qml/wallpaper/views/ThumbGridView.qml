@@ -194,6 +194,7 @@ GridView {
             onPositionChanged: {
                 if (appWallpaper.blockHover) return
                 if (root.currentIndex !== index) {
+                    root.interactionStarted()
                     root.currentIndex = index
                 }
             }

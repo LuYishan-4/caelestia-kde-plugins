@@ -10,19 +10,16 @@ QtObject {
 
 
     readonly property string homeDir: Quickshell.env("HOME")
-    readonly property string configDir: Quickshell.env("SKWD_CONFIG")
-        || (Quickshell.env("XDG_CONFIG_HOME") || (homeDir + "/.config")) + "/skwd"
-    readonly property string installDir: Quickshell.env("SKWD_LAUNCH_INSTALL") || Quickshell.env("SKWD_INSTALL") || configDir
-    readonly property string runtimeDir: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/skwd"
+    readonly property string configDir: (Quickshell.env("XDG_CONFIG_HOME") || (homeDir + "/.config")) + "/caelestia/plugins/wallpaper-selector"
+    readonly property string installDir: configDir
+    readonly property string runtimeDir: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/caelestia/plugins/wallpaper-selector"
     readonly property string scriptsDir: _resolve(_data.paths?.scripts) || (installDir + "/scripts")
-    readonly property string cacheDir: _resolve(_data.paths?.cache)
-        || Quickshell.env("SKWD_CACHE")
-        || (Quickshell.env("XDG_CACHE_HOME") || (homeDir + "/.cache")) + "/skwd"
+    readonly property string cacheDir: _resolve(_data.paths?.cache) || (Quickshell.env("XDG_CACHE_HOME") || (homeDir + "/.cache")) + "/caelestia/plugins/wallpaper-selector"
 
     property var _data: ({})
 
     property var _configFile: FileView {
-        path: configDir + "/data/config.json"
+        path: configDir + "/.config"
         preload: true
         watchChanges: true
         onLoaded: config._reparse()
@@ -104,7 +101,57 @@ QtObject {
     }
 
     property var _configWriter: FileView {
-        path: configDir + "/data/config.json"
+        path: configDir + "/.config"
         preload: true
+    }
+
+    readonly property var defaultConfig: ({
+        compositor: "niri",
+        monitor: "",
+        terminal: "kitty",
+        paths: {
+            scripts: "",
+            cache: "",
+            steam: "",
+            splash: ""
+        },
+        general: {
+            uiScale: 1.0
+        },
+        components: {
+            appWallpaper: {
+                displayMode: "slice",
+                sliceWidth: 135,
+                expandedWidth: 924,
+                sliceHeight: 520,
+                skewOffset: 35,
+                sliceSpacing: -22,
+                visibleCount: 12,
+                roundCorners: false,
+                cornerRadius: 16,
+                customPresets: {},
+                hexRadius: 140,
+                hexRows: 3,
+                hexCols: 7,
+                hexScrollStep: 1,
+                hexArc: true,
+                hexArcIntensity: 1.2,
+                gridColumns: 6,
+                gridRows: 3,
+                gridThumbWidth: 300,
+                gridThumbHeight: 169,
+                filters: [
+                    { key: "all",     icon: "\uF0136", label: "All",   type: "all",      value: "" },
+                    { key: "desktop", icon: "\uF003B", label: "Apps",  type: "source",   value: "desktop" },
+                    { key: "game",    icon: "\uF0297", label: "Games", type: "category", value: "Game" },
+                    { key: "steam",   icon: "\uF04D3", label: "Steam", type: "source",   value: "steam" }
+                ]
+            }
+        }
+    })
+
+    Component.onCompleted: {
+        var jsonStr = JSON.stringify(defaultConfig, null, 2)
+        Quickshell.execDetached(["bash", "-c", "mkdir -p '" + configDir + "' && if [ ! -s '" + configDir + "/.config' ]; then cat << 'EOF' > '" + configDir + "/.config'\n" + jsonStr + "\nEOF\nfi"])
     }
 }
