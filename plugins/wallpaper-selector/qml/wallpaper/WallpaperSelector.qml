@@ -57,23 +57,20 @@ PanelWindow {
     interval: 50
     onTriggered: {
         appWallpaper.cardVisible = true
+        scrollTimer.restart()
     }
   }
 
-  function dumpDebug(currentPath, targetIdx, firstItemPath, count) {
-      Quickshell.execDetached(["bash", "-c", "echo 'cp=" + currentPath + " ti=" + targetIdx + " fi=" + firstItemPath + " ct=" + count + "' > /tmp/wp_debug.txt"])
+  Timer {
+      id: scrollTimer
+      interval: 100
+      onTriggered: {
+          appWallpaper.scrollToCurrent()
+      }
   }
 
-  Text {
-      anchors.top: parent.top
-      anchors.right: parent.right
-      anchors.margins: 20
-      color: "red"
-      font.pixelSize: 16
-      text: appWallpaper.debugText
-      z: 9999
-  }
-  property string debugText: "Wait..."
+
+
 
   function scrollToCurrent() {
       var currentPath = String(CaelestiaApi.visuals.wallpaper.current || "").replace(/^file:\/\//, "").trim()
@@ -92,8 +89,6 @@ PanelWindow {
             }
           }
       }
-      
-      console.log("scrollToCurrent: path=" + currentPath + ", targetIdx=" + targetIdx + ", total=" + (arr ? arr.length : 0))
       
       if (targetIdx >= 0) {
         if (appWallpaper.isSliceMode) {
@@ -279,10 +274,6 @@ PanelWindow {
       property bool animateIn: appWallpaper.cardVisible
 
       onVisibleChanged: {
-          if (visible) {
-              // Defer execution slightly to let listviews populate their items
-              Qt.callLater(appWallpaper.scrollToCurrent)
-          }
       }
 
       onAnimateInChanged: {

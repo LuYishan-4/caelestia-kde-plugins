@@ -158,9 +158,9 @@ Item {
             var dy = Math.abs(point.y - hexItem._cy)
             return dy <= hexItem._cos30 * hexItem._r && dx <= hexItem._r - dy * 0.57735
         }
-        onContainsMouseChanged: {
+        onPositionChanged: function(mouse) {
             if (appWallpaper.blockHover) return
-            if (containsMouse) hexItem.hoverSelected()
+            if (contains(Qt.point(mouse.x, mouse.y))) hexItem.hoverSelected()
         }
         onClicked: function(mouse) {
             if (mouse.button === Qt.LeftButton && hexItem.itemData) {

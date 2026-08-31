@@ -191,7 +191,7 @@ GridView {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onEntered: {
+            onPositionChanged: {
                 if (appWallpaper.blockHover) return
                 if (root.currentIndex !== index) {
                     root.currentIndex = index

@@ -256,7 +256,7 @@ Item {
         acceptedButtons: Qt.LeftButton
         
         
-        onEntered: {
+        onPositionChanged: {
             if (appWallpaper.blockHover) return
             if (delegateItem._listView && delegateItem._listView.currentIndex !== delegateItem.index) {
                 delegateItem._listView.currentIndex = delegateItem.index
