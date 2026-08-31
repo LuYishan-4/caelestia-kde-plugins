@@ -2,7 +2,14 @@
 import Quickshell
 import QtQuick
 
-Root {
+PanelWindow {
+    anchors {
+        top: true
+        left: true
+    }
+
+    color: "transparent"
+
     Text {
         anchors.centerIn: parent
         text: "Hello from your plugin"

@@ -1,24 +1,27 @@
 {
   "format": "caelestia-plugin-index",
   "version": 1,
-  "generated": "2026-08-28T21:25:35Z",
+  "generated": "2026-08-30T21:45:31Z",
   "plugins": [
     {
-      "id": "wallpaper-selector",
-      "path": "plugins/wallpaper-selector",
-      "name": "Wallpaper Selector",
-      "description": "Full-screen wallpaper selector with glassmorphism UI.",
+      "id": "shimeji-cat",
+      "path": "plugins/shimeji-cat",
+      "name": "Shimeji Cat",
+      "description": "A little cat that lives on your desktop, wanders around, sits on the taskbar, and can be picked up and tossed with the mouse.",
+      "icon": "icon.png",
       "version": "1.0.0",
       "type": "quickshell",
       "author": {
-        "name": "ladybug-me",
-        "url": "https://github.com/ladybug-me"
+        "name": "0xSolanaceae",
+        "url": "https://github.com/0xSolanaceae"
       },
       "license": "GPL-3.0-or-later",
       "keywords": [
-        "wallpaper",
-        "selector",
-        "glassmorphism"
+        "shimeji",
+        "cat",
+        "pet",
+        "desktop",
+        "mascot"
       ],
       "shell-compat": {
         "min": "2.3"
