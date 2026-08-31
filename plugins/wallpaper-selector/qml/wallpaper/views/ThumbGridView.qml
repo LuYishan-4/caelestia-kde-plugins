@@ -1,0 +1,190 @@
+import QtQuick
+import qs.services.api
+import qs.services
+import qs.components.images
+import "../../"
+
+GridView {
+    id: root
+
+    property var colors
+    property int _gridCellGap: 8
+
+    signal cycleNext(int step)
+    signal cyclePrev(int step)
+    signal wallpaperSelected(string path)
+    signal escapePressed()
+    signal appendSearchText(string text)
+    signal backspaceSearchText()
+    signal interactionStarted()
+
+    cellWidth: Config.gridThumbWidth + root._gridCellGap
+    cellHeight: Config.gridThumbHeight + root._gridCellGap
+    clip: true
+    keyNavigationEnabled: false
+    cacheBuffer: 300
+    boundsBehavior: Flickable.StopAtBounds
+    
+    interactive: false
+
+    property real _scrollTarget: 0
+    onContentYChanged: {
+        if (!_gridScrollAnim.running) _scrollTarget = contentY
+    }
+
+    NumberAnimation {
+        id: _gridScrollAnim
+        target: root
+        property: "contentY"
+        duration: 400
+        easing.type: Easing.OutCubic
+    }
+
+    function _snapScroll(delta) {
+        if (!_gridScrollAnim.running) _scrollTarget = contentY
+        var step = cellHeight
+        _scrollTarget += (delta > 0 ? -step : step)
+        var maxY = Math.max(0, contentHeight - height)
+        _scrollTarget = Math.max(0, Math.min(_scrollTarget, maxY))
+        _gridScrollAnim.stop()
+        _gridScrollAnim.from = contentY
+        _gridScrollAnim.to = _scrollTarget
+        _gridScrollAnim.start()
+    }
+
+    function _snapScrollTo(target) {
+        var maxY = Math.max(0, contentHeight - height)
+        _scrollTarget = Math.max(0, Math.min(target, maxY))
+        _gridScrollAnim.stop()
+        _gridScrollAnim.from = contentY
+        _gridScrollAnim.to = _scrollTarget
+        _gridScrollAnim.start()
+    }
+
+    function _ensureVisible(idx) {
+        var cols = Math.max(1, Math.floor(width / cellWidth))
+        var row = Math.floor(idx / cols)
+        var rowTop = row * cellHeight
+        var rowBottom = rowTop + cellHeight
+        if (rowTop < contentY) _snapScrollTo(rowTop)
+        else if (rowBottom > contentY + height) _snapScrollTo(rowBottom - height)
+    }
+
+    WheelHandler {
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+        onWheel: function(event) {
+            root.interactionStarted()
+            if (event.angleDelta.y > 0 || event.angleDelta.x > 0) {
+                root.cyclePrev(1)
+            } else if (event.angleDelta.y < 0 || event.angleDelta.x < 0) {
+                root.cycleNext(1)
+            }
+            event.accepted = true
+        }
+    }
+
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Escape) {
+            root.escapePressed()
+            event.accepted = true
+            return
+        }
+
+        if (event.key === Qt.Key_Tab || event.key === Qt.Key_Right || event.key === Qt.Key_D || event.key === Qt.Key_Down || event.key === Qt.Key_S) {
+            root.cycleNext(1); event.accepted = true; return
+        }
+        if (event.key === Qt.Key_Backtab || event.key === Qt.Key_Left || event.key === Qt.Key_A || event.key === Qt.Key_Up || event.key === Qt.Key_W) {
+            root.cyclePrev(1); event.accepted = true; return
+        }
+        if (event.text && event.text.length > 0 && !event.modifiers) {
+            var c = event.text.charCodeAt(0)
+            if (c >= 32 && c < 127) {
+                root.appendSearchText(event.text)
+                event.accepted = true
+                return
+            }
+        }
+
+        if (event.key === Qt.Key_Backspace) {
+            root.backspaceSearchText()
+            event.accepted = true
+            return
+        }
+
+        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            if (root.currentIndex >= 0 && root.currentIndex < root.model.count) {
+                var app = root.model.get(root.currentIndex)
+                root.wallpaperSelected(app.path)
+            }
+            event.accepted = true
+            return
+        }
+    }
+
+    add: Transition {
+        NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Style.animEnter; easing.type: Easing.OutCubic }
+        NumberAnimation { property: "scale"; from: 0.9; to: 1; duration: Style.animEnter; easing.type: Easing.OutCubic }
+    }
+    remove: Transition {
+        NumberAnimation { property: "opacity"; to: 0; duration: Style.animNormal; easing.type: Easing.InCubic }
+    }
+    displaced: Transition {
+        NumberAnimation { properties: "x,y"; duration: Style.animMedium; easing.type: Easing.OutCubic }
+    }
+
+    delegate: Rectangle {
+        width: Config.gridThumbWidth
+        height: Config.gridThumbHeight
+        radius: 6
+        color: Qt.rgba(root.colors.surfaceContainer.r, root.colors.surfaceContainer.g, root.colors.surfaceContainer.b, 0.85)
+        border.width: _gridMouse.containsMouse ? 2 : 0
+        border.color: root.colors.primary
+        clip: true
+
+        readonly property bool _preferGlyph: false
+
+        CachingImage {
+            anchors.fill: parent
+            path: Images.isVideo(modelData.name) ? CaelestiaApi.visuals.wallpaper.thumbFor(modelData.path) : modelData.path
+            horizontalAlignment: Image.AlignHCenter
+            verticalAlignment: Image.AlignVCenter
+            smooth: true
+        }
+
+        Text {
+            anchors.centerIn: parent
+            visible: Images.isVideo(modelData.name)
+            text: "\ue04b"
+            font.family: Style.fontFamilyIcons
+            font.pixelSize: Math.min(parent.width, parent.height) * 0.45
+            color: Qt.rgba(root.colors.primary.r, root.colors.primary.g, root.colors.primary.b, 0.85)
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            color: Qt.rgba(0, 0, 0, _gridMouse.containsMouse ? 0.15 : 0.4)
+            Behavior on color { ColorAnimation { duration: 150 } }
+        }
+
+        Text {
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 6
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: (modelData.name || "").toUpperCase()
+            font.family: Style.fontFamily
+            font.pixelSize: 10
+            font.weight: Font.Bold
+            color: "#fff"
+        }
+
+        MouseArea {
+            id: _gridMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+                root.wallpaperSelected(modelData.path)
+            }
+        }
+    }
+}
