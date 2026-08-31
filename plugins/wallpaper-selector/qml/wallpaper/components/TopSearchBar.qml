@@ -4,6 +4,7 @@ import Caelestia
 import Caelestia.Config as ShellConfig
 import qs.components.controls
 import qs.services.api
+import qs.components
 
 StyledRect {
     id: root

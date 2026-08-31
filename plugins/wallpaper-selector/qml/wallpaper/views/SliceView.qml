@@ -57,10 +57,17 @@ ListView {
         NumberAnimation { properties: "x,y"; duration: Style.animMedium; easing.type: Easing.OutCubic }
     }
 
+    property double lastWheelTime: 0
     WheelHandler {
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: function(event) {
             root.interactionStarted()
+            var now = Date.now()
+            if (now - root.lastWheelTime < 100) {
+                event.accepted = true
+                return
+            }
+            root.lastWheelTime = now
             if (event.angleDelta.y > 0 || event.angleDelta.x > 0) {
                 root.cyclePrev(1)
             } else if (event.angleDelta.y < 0 || event.angleDelta.x < 0) {
@@ -69,6 +76,8 @@ ListView {
             event.accepted = true
         }
     }
+
+
 
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Escape) {
@@ -99,8 +108,8 @@ ListView {
         }
 
         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-            if (root.currentIndex >= 0 && root.currentIndex < root.model.count) {
-                var app = root.model.get(root.currentIndex)
+            if (root.currentIndex >= 0 && root.model.values && root.currentIndex < root.model.values.length) {
+                var app = root.model.values ? root.model.values[root.currentIndex] : null
                 root.wallpaperSelected(app.path)
             }
             event.accepted = true

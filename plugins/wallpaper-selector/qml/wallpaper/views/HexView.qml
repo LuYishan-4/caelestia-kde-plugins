@@ -43,9 +43,9 @@ ListView {
         if (visible) {
             _initialSnap = true
             highlightMoveDuration = 0
-            var startCol = Math.min(Math.floor(Config.hexCols / 2), count - 1)
-            if (startCol >= 0) { currentIndex = startCol; _selectedCol = startCol; _selectedRow = 0 }
-            positionViewAtIndex(currentIndex, ListView.Center)
+            if (currentIndex >= 0) {
+                positionViewAtIndex(currentIndex, ListView.Center)
+            }
             _snapRestoreTimer.restart()
         }
     }
@@ -82,10 +82,17 @@ ListView {
         NumberAnimation { properties: "x,y"; duration: Style.animMedium; easing.type: Easing.OutCubic }
     }
 
+    property double lastWheelTime: 0
     WheelHandler {
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: function(event) {
             root.interactionStarted()
+            var now = Date.now()
+            if (now - root.lastWheelTime < 100) {
+                event.accepted = true
+                return
+            }
+            root.lastWheelTime = now
             if (event.angleDelta.y > 0 || event.angleDelta.x > 0) {
                 root.cyclePrev(1)
             } else if (event.angleDelta.y < 0 || event.angleDelta.x < 0) {
@@ -94,6 +101,8 @@ ListView {
             event.accepted = true
         }
     }
+
+
 
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Escape) {
@@ -124,8 +133,8 @@ ListView {
         }
 
         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-            if (root.currentIndex >= 0 && root.currentIndex < root.model.count) {
-                var app = root.model.get(root.currentIndex)
+            if (root.currentIndex >= 0 && root.model.values && root.currentIndex < root.model.values.length) {
+                var app = root.model.values ? root.model.values[root.currentIndex] : null
                 root.wallpaperSelected(app.path)
             }
             event.accepted = true
@@ -163,9 +172,9 @@ ListView {
             property var _items: {
                 var arr = []
                 var start = hexCol.colIdx * root._rows
-                var end = Math.min(start + root._rows, root.model ? root.model.count : 0)
+                var end = Math.min(start + root._rows, root.model && root.model.values ? root.model.values.length : 0)
                 for (var i = start; i < end; i++) {
-                    var r = root.model.get(i)
+                    var r = root.model.values ? root.model.values[i] : null
                     if (r) arr.push({ row: r, rowIdx: i - start, flatIdx: i })
                 }
                 return arr

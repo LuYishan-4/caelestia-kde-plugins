@@ -256,17 +256,9 @@ Item {
         acceptedButtons: Qt.LeftButton
         
         
-        onPositionChanged: function(mouse) {
+        onEntered: {
             if (appWallpaper.blockHover) return
-            if (!delegateItem._listView) return
-            if (delegateItem._listView.moving) return
-            var globalPos = mapToItem(delegateItem._listView, mouse.x, mouse.y)
-            var dx = Math.abs(globalPos.x - delegateItem._listView.lastMouseX)
-            var dy = Math.abs(globalPos.y - delegateItem._listView.lastMouseY)
-            if (dx > 2 || dy > 2) {
-                delegateItem._listView.lastMouseX = globalPos.x
-                delegateItem._listView.lastMouseY = globalPos.y
-                delegateItem._listView.keyboardNavActive = false
+            if (delegateItem._listView && delegateItem._listView.currentIndex !== delegateItem.index) {
                 delegateItem._listView.currentIndex = delegateItem.index
             }
         }

@@ -25,7 +25,7 @@ GridView {
     cacheBuffer: 300
     boundsBehavior: Flickable.StopAtBounds
     
-    interactive: false
+
 
     property real _scrollTarget: 0
     onContentYChanged: {
@@ -70,10 +70,17 @@ GridView {
         else if (rowBottom > contentY + height) _snapScrollTo(rowBottom - height)
     }
 
+    property double lastWheelTime: 0
     WheelHandler {
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: function(event) {
             root.interactionStarted()
+            var now = Date.now()
+            if (now - root.lastWheelTime < 100) {
+                event.accepted = true
+                return
+            }
+            root.lastWheelTime = now
             if (event.angleDelta.y > 0 || event.angleDelta.x > 0) {
                 root.cyclePrev(1)
             } else if (event.angleDelta.y < 0 || event.angleDelta.x < 0) {
@@ -82,6 +89,8 @@ GridView {
             event.accepted = true
         }
     }
+
+
 
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Escape) {
@@ -112,8 +121,8 @@ GridView {
         }
 
         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-            if (root.currentIndex >= 0 && root.currentIndex < root.model.count) {
-                var app = root.model.get(root.currentIndex)
+            if (root.currentIndex >= 0 && root.model.values && root.currentIndex < root.model.values.length) {
+                var app = root.model.values ? root.model.values[root.currentIndex] : null
                 root.wallpaperSelected(app.path)
             }
             event.accepted = true
@@ -182,6 +191,12 @@ GridView {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
+            onEntered: {
+                if (appWallpaper.blockHover) return
+                if (root.currentIndex !== index) {
+                    root.currentIndex = index
+                }
+            }
             onClicked: {
                 root.wallpaperSelected(modelData.path)
             }

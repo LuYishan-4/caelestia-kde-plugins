@@ -36,11 +36,18 @@ PanelWindow {
 
   onShowingChanged: {
     if (showing) {
-      topSearchBar.text = ""
+      if (topSearchBar.text !== "") {
+          topSearchBar.text = ""
+      }
       cardShowTimer.restart()
     } else {
       cardVisible = false
-      topSearchBar.text = ""
+      if (typeof CaelestiaApi.visuals.wallpaper.stopPreview === "function") {
+          CaelestiaApi.visuals.wallpaper.stopPreview()
+      }
+      if (topSearchBar.text !== "") {
+          topSearchBar.text = ""
+      }
       Qt.callLater(function() { gc() })
     }
   }
@@ -48,8 +55,62 @@ PanelWindow {
   Timer {
     id: cardShowTimer
     interval: 50
-    onTriggered: appWallpaper.cardVisible = true
+    onTriggered: {
+        appWallpaper.cardVisible = true
+    }
   }
+
+  function dumpDebug(currentPath, targetIdx, firstItemPath, count) {
+      Quickshell.execDetached(["bash", "-c", "echo 'cp=" + currentPath + " ti=" + targetIdx + " fi=" + firstItemPath + " ct=" + count + "' > /tmp/wp_debug.txt"])
+  }
+
+  Text {
+      anchors.top: parent.top
+      anchors.right: parent.right
+      anchors.margins: 20
+      color: "red"
+      font.pixelSize: 16
+      text: appWallpaper.debugText
+      z: 9999
+  }
+  property string debugText: "Wait..."
+
+  function scrollToCurrent() {
+      var currentPath = String(CaelestiaApi.visuals.wallpaper.current || "").replace(/^file:\/\//, "").trim()
+      
+      var targetIdx = -1
+      var arr = appWallpaper.wallpaperResults ? appWallpaper.wallpaperResults.values : []
+      if (arr && arr.length > 0) {
+          for (var i = 0; i < arr.length; i++) {
+            var w = arr[i]
+            if (w && w.path) {
+              var wp = String(w.path).replace(/^file:\/\//, "").trim()
+              if (wp === currentPath) {
+                targetIdx = i
+                break
+              }
+            }
+          }
+      }
+      
+      console.log("scrollToCurrent: path=" + currentPath + ", targetIdx=" + targetIdx + ", total=" + (arr ? arr.length : 0))
+      
+      if (targetIdx >= 0) {
+        if (appWallpaper.isSliceMode) {
+          sliceListView.currentIndex = targetIdx
+          sliceListView.positionViewAtIndex(targetIdx, ListView.Center)
+        } else if (appWallpaper.isHexMode) {
+          hexListView.currentIndex = targetIdx
+          hexListView._selectedCol = targetIdx
+          hexListView.positionViewAtIndex(targetIdx, ListView.Center)
+        } else if (appWallpaper.isGridMode) {
+          thumbGridView.currentIndex = targetIdx
+          thumbGridView._ensureVisible(targetIdx)
+        }
+      }
+  }
+
+
 
   Timer {
     id: focusTimer
@@ -64,13 +125,13 @@ PanelWindow {
   property int sliceWidth: Config.sliceWidth
   
   Shortcut {
-    sequences: ["Tab", "Right", "Down", "D", "S"]
+    sequences: ["Tab", "Right", "Down"]
     onActivated: appWallpaper.cycleNext()
     enabled: appWallpaper.cardVisible && appWallpaper.isMainScreen && !topSearchBar.activeFocus
   }
 
   Shortcut {
-    sequences: ["Shift+Tab", "Left", "Up", "A", "W"]
+    sequences: ["Shift+Tab", "Left", "Up"]
     onActivated: appWallpaper.cyclePrev()
     enabled: appWallpaper.cardVisible && appWallpaper.isMainScreen && !topSearchBar.activeFocus
   }
@@ -127,7 +188,7 @@ PanelWindow {
     lastContentX = 0
     lastIndex = 0
     sliceListView.currentIndex = 0
-    if (appWallpaper.wallpaperResults.count > 0)
+    if (appWallpaper.wallpaperResults.values && appWallpaper.wallpaperResults.values.length > 0)
       sliceListView.positionViewAtIndex(0, ListView.Beginning)
   }
 
@@ -138,60 +199,46 @@ PanelWindow {
   property bool blockHover: interactionBlockerTimer.running
 
   function cycleNext(step) {
-      if (!appWallpaper.wallpaperResults || appWallpaper.wallpaperResults.count === 0) return
+      if (!appWallpaper.wallpaperResults.values || appWallpaper.wallpaperResults.values.length === 0) return
       interactionBlockerTimer.restart()
       var s = step || 1
       var nextIdx = 0
-      var count = appWallpaper.wallpaperResults.count
+      var count = appWallpaper.wallpaperResults.values.length
       if (appWallpaper.isSliceMode) {
         nextIdx = (sliceListView.currentIndex + s) % count
         if (nextIdx < 0) nextIdx += count
         sliceListView.currentIndex = nextIdx
-        sliceListView.positionViewAtIndex(nextIdx, ListView.Center)
       } else if (appWallpaper.isHexMode) {
         nextIdx = (hexListView.currentIndex + s) % count
         if (nextIdx < 0) nextIdx += count
         hexListView.currentIndex = nextIdx
         hexListView._selectedCol = nextIdx
-        hexListView.positionViewAtIndex(nextIdx, ListView.Center)
       } else if (appWallpaper.isGridMode) {
         nextIdx = (thumbGridView.currentIndex + s) % count
         if (nextIdx < 0) nextIdx += count
         thumbGridView.currentIndex = nextIdx
-        thumbGridView._ensureVisible(nextIdx)
-      }
-      var wall = appWallpaper.wallpaperResults.get(nextIdx)
-      if (wall) {
-          CaelestiaApi.visuals.wallpaper.setWallpaper(wall.path)
       }
   }
 
   function cyclePrev(step) {
-      if (!appWallpaper.wallpaperResults || appWallpaper.wallpaperResults.count === 0) return
+      if (!appWallpaper.wallpaperResults.values || appWallpaper.wallpaperResults.values.length === 0) return
       interactionBlockerTimer.restart()
       var s = step || 1
       var nextIdx = 0
-      var count = appWallpaper.wallpaperResults.count
+      var count = appWallpaper.wallpaperResults.values.length
       if (appWallpaper.isSliceMode) {
         nextIdx = (sliceListView.currentIndex - s) % count
         if (nextIdx < 0) nextIdx += count
         sliceListView.currentIndex = nextIdx
-        sliceListView.positionViewAtIndex(nextIdx, ListView.Center)
       } else if (appWallpaper.isHexMode) {
         nextIdx = (hexListView.currentIndex - s) % count
         if (nextIdx < 0) nextIdx += count
         hexListView.currentIndex = nextIdx
         hexListView._selectedCol = nextIdx
-        hexListView.positionViewAtIndex(nextIdx, ListView.Center)
       } else if (appWallpaper.isGridMode) {
         nextIdx = (thumbGridView.currentIndex - s) % count
         if (nextIdx < 0) nextIdx += count
         thumbGridView.currentIndex = nextIdx
-        thumbGridView._ensureVisible(nextIdx)
-      }
-      var wall = appWallpaper.wallpaperResults.get(nextIdx)
-      if (wall) {
-          CaelestiaApi.visuals.wallpaper.setWallpaper(wall.path)
       }
   }
 
@@ -231,6 +278,13 @@ PanelWindow {
 
       property bool animateIn: appWallpaper.cardVisible
 
+      onVisibleChanged: {
+          if (visible) {
+              // Defer execution slightly to let listviews populate their items
+              Qt.callLater(appWallpaper.scrollToCurrent)
+          }
+      }
+
       onAnimateInChanged: {
         fadeInAnim.stop()
         if (animateIn) {
@@ -268,8 +322,8 @@ PanelWindow {
 
             onAccepted: {
                 var currentView = appWallpaper.isSliceMode ? sliceListView : (appWallpaper.isHexMode ? hexListView : thumbGridView)
-                if (currentView.currentIndex >= 0 && currentView.currentIndex < appWallpaper.wallpaperResults.count) {
-                    var wall = appWallpaper.wallpaperResults.get(currentView.currentIndex)
+                if (currentView.currentIndex >= 0 && appWallpaper.wallpaperResults.values && currentView.currentIndex < appWallpaper.wallpaperResults.values.length) {
+                    var wall = appWallpaper.wallpaperResults.values ? appWallpaper.wallpaperResults.values[currentView.currentIndex] : null
                     CaelestiaApi.visuals.wallpaper.setWallpaper(wall.path)
                     appWallpaper.showing = false
                 }
@@ -327,10 +381,16 @@ PanelWindow {
             CaelestiaApi.visuals.wallpaper.setWallpaper(path)
             appWallpaper.showing = false
         }
+        onCurrentIndexChanged: {
+            if (currentIndex >= 0 && appWallpaper.wallpaperResults.values && currentIndex < appWallpaper.wallpaperResults.values.length) {
+                var wall = appWallpaper.wallpaperResults.values[currentIndex]
+                if (wall) CaelestiaApi.visuals.wallpaper.preview(wall.path)
+            }
+        }
         onEscapePressed: appWallpaper.showing = false
         onAppendSearchText: text => topSearchBar.appendSearchText(text)
         onBackspaceSearchText: () => topSearchBar.backspaceSearchText()
-        onInteractionStarted: appWallpaper.interactionBlockerTimer.restart()
+        onInteractionStarted: interactionBlockerTimer.restart()
     }
 
     Views.HexView {
@@ -346,7 +406,7 @@ PanelWindow {
         focus: appWallpaper.showing && visible
         
         colors: appWallpaper.colors
-        model: (appWallpaper.cardVisible && appWallpaper.isHexMode) ? Math.ceil((appWallpaper.wallpaperResults ? appWallpaper.wallpaperResults.count : 0) / Math.max(1, Config.hexRows)) : 0
+        model: (appWallpaper.cardVisible && appWallpaper.isHexMode) ? Math.ceil((appWallpaper.wallpaperResults.values ? appWallpaper.wallpaperResults.values.length : 0) / Math.max(1, Config.hexRows)) : 0
         
         onCycleNext: step => appWallpaper.cycleNext(step)
         onCyclePrev: step => appWallpaper.cyclePrev(step)
@@ -354,10 +414,16 @@ PanelWindow {
             CaelestiaApi.visuals.wallpaper.setWallpaper(path)
             appWallpaper.showing = false
         }
+        onCurrentIndexChanged: {
+            if (currentIndex >= 0 && appWallpaper.wallpaperResults.values && currentIndex < appWallpaper.wallpaperResults.values.length) {
+                var wall = appWallpaper.wallpaperResults.values[currentIndex]
+                if (wall) CaelestiaApi.visuals.wallpaper.preview(wall.path)
+            }
+        }
         onEscapePressed: appWallpaper.showing = false
         onAppendSearchText: text => topSearchBar.appendSearchText(text)
         onBackspaceSearchText: () => topSearchBar.backspaceSearchText()
-        onInteractionStarted: appWallpaper.interactionBlockerTimer.restart()
+        onInteractionStarted: interactionBlockerTimer.restart()
     }
 
     Views.ThumbGridView {
@@ -381,10 +447,16 @@ PanelWindow {
             CaelestiaApi.visuals.wallpaper.setWallpaper(path)
             appWallpaper.showing = false
         }
+        onCurrentIndexChanged: {
+            if (currentIndex >= 0 && appWallpaper.wallpaperResults.values && currentIndex < appWallpaper.wallpaperResults.values.length) {
+                var wall = appWallpaper.wallpaperResults.values[currentIndex]
+                if (wall) CaelestiaApi.visuals.wallpaper.preview(wall.path)
+            }
+        }
         onEscapePressed: appWallpaper.showing = false
         onAppendSearchText: text => topSearchBar.appendSearchText(text)
         onBackspaceSearchText: () => topSearchBar.backspaceSearchText()
-        onInteractionStarted: appWallpaper.interactionBlockerTimer.restart()
+        onInteractionStarted: interactionBlockerTimer.restart()
     }
 
     Components.FilterRow {
@@ -428,8 +500,8 @@ PanelWindow {
             }
             if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                 var currentView = appWallpaper.isSliceMode ? sliceListView : (appWallpaper.isHexMode ? hexListView : thumbGridView)
-                if (currentView.currentIndex >= 0 && currentView.currentIndex < CaelestiaApi.visuals.wallpaper.results.count) {
-                    var app = CaelestiaApi.visuals.wallpaper.results.get(currentView.currentIndex)
+                if (currentView.currentIndex >= 0 && appWallpaper.wallpaperResults.values && currentView.currentIndex < appWallpaper.wallpaperResults.values.length) {
+                    var app = appWallpaper.wallpaperResults.values ? appWallpaper.wallpaperResults.values[currentView.currentIndex] : null
                     CaelestiaApi.visuals.wallpaper.setWallpaper(app.path)
                     appWallpaper.showing = false
                 }
