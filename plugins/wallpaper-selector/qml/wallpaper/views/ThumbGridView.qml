@@ -121,9 +121,9 @@ GridView {
         }
 
         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-            if (root.currentIndex >= 0 && root.model.values && root.currentIndex < root.model.values.length) {
-                var app = root.model.values ? root.model.values[root.currentIndex] : null
-                root.wallpaperSelected(app.path)
+            if (root.currentIndex >= 0 && root.model && root.currentIndex < root.model.length) {
+                var app = root.model[root.currentIndex]
+                if (app) root.wallpaperSelected(app.path)
             }
             event.accepted = true
             return

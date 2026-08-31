@@ -7,6 +7,7 @@ ListView {
     id: root
 
     property var colors
+    property var wallpaperData: []
 
     signal cycleNext(int step)
     signal cyclePrev(int step)
@@ -133,9 +134,9 @@ ListView {
         }
 
         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-            if (root.currentIndex >= 0 && root.model.values && root.currentIndex < root.model.values.length) {
-                var app = root.model.values ? root.model.values[root.currentIndex] : null
-                root.wallpaperSelected(app.path)
+            if (root.currentIndex >= 0 && root.wallpaperData && root.currentIndex < root.wallpaperData.length) {
+                var app = root.wallpaperData[root.currentIndex]
+                if (app) root.wallpaperSelected(app.path)
             }
             event.accepted = true
             return
@@ -172,9 +173,9 @@ ListView {
             property var _items: {
                 var arr = []
                 var start = hexCol.colIdx * root._rows
-                var end = Math.min(start + root._rows, root.model && root.model.values ? root.model.values.length : 0)
+                var end = Math.min(start + root._rows, root.wallpaperData ? root.wallpaperData.length : 0)
                 for (var i = start; i < end; i++) {
-                    var r = root.model.values ? root.model.values[i] : null
+                    var r = root.wallpaperData ? root.wallpaperData[i] : null
                     if (r) arr.push({ row: r, rowIdx: i - start, flatIdx: i })
                 }
                 return arr

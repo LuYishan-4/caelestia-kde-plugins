@@ -138,6 +138,7 @@ Item {
                     TextButton {
                         text: "RESET"
                         type: TextButton.Filled
+                        Layout.rightMargin: 30
                         onClicked: {
                             Config.resetToDefault()
                         }
@@ -281,20 +282,6 @@ Item {
                     from: 50; to: 600; stepSize: 10
                     actualValue: Config.gridThumbHeight
                     onUpdated: val => Config.saveKey("components.appWallpaper.gridThumbHeight", val)
-                }
-                
-                Item { Layout.preferredHeight: ShellConfig.Tokens.padding.large } // Spacer
-                
-                Common.InfoRow {
-                    label: "Restore Defaults"
-                    subtext: "Reset all wallpaper selector settings"
-                    first: true
-                    last: true
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: Config.resetToDefault()
-                    }
                 }
                 
                 Item { Layout.preferredHeight: ShellConfig.Tokens.padding.largeIncreased } // Bottom padding

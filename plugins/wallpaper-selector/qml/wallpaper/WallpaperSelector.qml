@@ -432,6 +432,7 @@ PanelWindow {
         focus: appWallpaper.showing && visible
         
         colors: appWallpaper.colors
+        wallpaperData: appWallpaper.wallpaperResults.values
         model: (appWallpaper.cardVisible && appWallpaper.isHexMode) ? Math.ceil((appWallpaper.wallpaperResults.values ? appWallpaper.wallpaperResults.values.length : 0) / Math.max(1, Config.hexRows)) : 0
         
         onCycleNext: step => appWallpaper.cycleNext(step)
@@ -465,7 +466,7 @@ PanelWindow {
         focus: appWallpaper.showing && visible
         
         colors: appWallpaper.colors
-        model: appWallpaper.cardVisible && appWallpaper.isGridMode ? appWallpaper.wallpaperResults : null
+        model: appWallpaper.cardVisible && appWallpaper.isGridMode ? appWallpaper.wallpaperResults.values : null
         
         onCycleNext: step => appWallpaper.cycleNext(step)
         onCyclePrev: step => appWallpaper.cyclePrev(step)
