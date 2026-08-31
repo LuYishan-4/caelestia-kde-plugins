@@ -14,18 +14,19 @@ import qs.components.images
 import Caelestia
 import Caelestia.Config as ShellConfig
 import Caelestia.Models
+import qs.services
 import ".."
-import ".."
+import ".." as PluginStyle
 
 
-Scope {
+PanelWindow {
   id: appWallpaper
 
   
+  
   property var colors
   property bool showing: false
-
-  property string mainMonitor: Config.mainMonitor
+  property bool isMainScreen: true
   
   property var wallpaperResults: ScriptModel {
     values: {
@@ -62,6 +63,19 @@ Scope {
 
   
   property int sliceWidth: Config.sliceWidth
+  
+  Shortcut {
+    sequences: ["Tab", "Right", "Down", "D", "S"]
+    onActivated: appWallpaper.cycleNext()
+    enabled: appWallpaper.cardVisible && appWallpaper.isMainScreen && !searchInput.activeFocus
+  }
+
+  Shortcut {
+    sequences: ["Shift+Tab", "Left", "Up", "A", "W"]
+    onActivated: appWallpaper.cyclePrev()
+    enabled: appWallpaper.cardVisible && appWallpaper.isMainScreen && !searchInput.activeFocus
+  }
+
   property int expandedWidth: Config.expandedWidth
   property int sliceHeight: Config.sliceHeight
   property int skewOffset: Config.skewOffset
@@ -96,16 +110,17 @@ Scope {
   readonly property int _gridTotalH: Config.gridRows * (Config.gridThumbHeight + _gridCellGap)
 
   
-  property int topBarHeight: 50
+  property int topBarHeight: 90
+  property int bottomBarHeight: 90
   property int cardWidth: {
     if (isHexMode)    return hexGridWidth + 60
     if (isGridMode)   return _gridTotalW + 40
     return 1600
   }
   property int cardHeight: {
-    if (isHexMode)    return hexGridHeight + topBarHeight + 50
-    if (isGridMode)   return _gridTotalH + topBarHeight + 50
-    return sliceHeight + topBarHeight + 60
+    if (isHexMode)    return hexGridHeight + topBarHeight + bottomBarHeight
+    if (isGridMode)   return _gridTotalH + topBarHeight + bottomBarHeight
+    return sliceHeight + topBarHeight + bottomBarHeight
   }
 
   property bool cardVisible: false
@@ -122,47 +137,104 @@ Scope {
   }
 
 
-  PanelWindow {
-    id: wallpaperPanel
+  Timer {
+    id: interactionBlockerTimer
+    interval: 300
+  }
+  property bool blockHover: interactionBlockerTimer.running
 
-    screen: Quickshell.screens.find(s => s.name === appWallpaper.mainMonitor) ?? Quickshell.screens[0]
+  function cycleNext(step) {
+      if (!appWallpaper.wallpaperResults || appWallpaper.wallpaperResults.count === 0) return
+      interactionBlockerTimer.restart()
+      var s = step || 1
+      var nextIdx = 0
+      var count = appWallpaper.wallpaperResults.count
+      if (appWallpaper.isSliceMode) {
+        nextIdx = (sliceListView.currentIndex + s) % count
+        if (nextIdx < 0) nextIdx += count
+        sliceListView.currentIndex = nextIdx
+        sliceListView.positionViewAtIndex(nextIdx, ListView.Center)
+      } else if (appWallpaper.isHexMode) {
+        nextIdx = (hexListView.currentIndex + s) % count
+        if (nextIdx < 0) nextIdx += count
+        hexListView.currentIndex = nextIdx
+        hexListView._selectedCol = nextIdx
+        hexListView.positionViewAtIndex(nextIdx, ListView.Center)
+      } else if (appWallpaper.isGridMode) {
+        nextIdx = (thumbGridView.currentIndex + s) % count
+        if (nextIdx < 0) nextIdx += count
+        thumbGridView.currentIndex = nextIdx
+        thumbGridView._ensureVisible(nextIdx)
+      }
+      var wall = appWallpaper.wallpaperResults.get(nextIdx)
+      if (wall) {
+          CaelestiaApi.visuals.wallpaper.setWallpaper(wall.path)
+      }
+  }
 
-    anchors {
-      top: true
-      bottom: true
-      left: true
-      right: true
-    }
+  function cyclePrev(step) {
+      if (!appWallpaper.wallpaperResults || appWallpaper.wallpaperResults.count === 0) return
+      interactionBlockerTimer.restart()
+      var s = step || 1
+      var nextIdx = 0
+      var count = appWallpaper.wallpaperResults.count
+      if (appWallpaper.isSliceMode) {
+        nextIdx = (sliceListView.currentIndex - s) % count
+        if (nextIdx < 0) nextIdx += count
+        sliceListView.currentIndex = nextIdx
+        sliceListView.positionViewAtIndex(nextIdx, ListView.Center)
+      } else if (appWallpaper.isHexMode) {
+        nextIdx = (hexListView.currentIndex - s) % count
+        if (nextIdx < 0) nextIdx += count
+        hexListView.currentIndex = nextIdx
+        hexListView._selectedCol = nextIdx
+        hexListView.positionViewAtIndex(nextIdx, ListView.Center)
+      } else if (appWallpaper.isGridMode) {
+        nextIdx = (thumbGridView.currentIndex - s) % count
+        if (nextIdx < 0) nextIdx += count
+        thumbGridView.currentIndex = nextIdx
+        thumbGridView._ensureVisible(nextIdx)
+      }
+      var wall = appWallpaper.wallpaperResults.get(nextIdx)
+      if (wall) {
+          CaelestiaApi.visuals.wallpaper.setWallpaper(wall.path)
+      }
+  }
 
-    visible: appWallpaper.showing
-    color: "transparent"
+  
+  property bool realShowing: appWallpaper.showing
+  property real tintOpacity: realShowing ? 1.0 : 0.0
+  Behavior on tintOpacity { NumberAnimation { duration: 300 } }
 
-    WlrLayershell.namespace: "wallpaper-selector"
-    WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: appWallpaper.showing ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+  visible: appWallpaper.showing || tintOpacity > 0
+  color: "transparent"
 
-    exclusionMode: ExclusionMode.Ignore
+  anchors { top: true; bottom: true; left: true; right: true }
 
+  WlrLayershell.namespace: "wallpaper-selector"
+  WlrLayershell.layer: WlrLayer.Overlay
+  WlrLayershell.keyboardFocus: appWallpaper.showing ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-    Rectangle {
-      anchors.fill: parent
-      color: Qt.rgba(0, 0, 0, 0.5)
-      opacity: appWallpaper.cardVisible ? 1 : 0
-      Behavior on opacity { NumberAnimation { duration: 300 } }
-    }
+  exclusionMode: ExclusionMode.Ignore
 
-    MouseArea {
-      anchors.fill: parent
-      onClicked: appWallpaper.showing = false
-    }
+  Rectangle {
+    anchors.fill: parent
+    color: Qt.rgba(0, 0, 0, 0.5)
+    opacity: appWallpaper.tintOpacity
+  }
 
+  MouseArea {
+    anchors.fill: parent
+    onClicked: appWallpaper.showing = false
+  }
 
-    Item {
+  Item {
       id: cardContainer
+
       width: appWallpaper.cardWidth
       height: appWallpaper.cardHeight
       anchors.centerIn: parent
-      visible: appWallpaper.cardVisible
+      visible: appWallpaper.showing && appWallpaper.cardVisible && appWallpaper.isMainScreen
 
       property bool animateIn: appWallpaper.cardVisible
 
@@ -193,46 +265,16 @@ Scope {
         id: backgroundRect
         anchors.fill: parent
 
-        RowLayout {
-          id: topFilterBar
-          anchors.top: parent.top
-          anchors.topMargin: 15
-          anchors.horizontalCenter: parent.horizontalCenter
-          spacing: ShellConfig.Tokens.spacing.large
-          z: 11
-
-          Row {
-            id: sourceFilterRow
-            spacing: ShellConfig.Tokens.spacing.small
-
-            IconTextButton {
-                text: qsTr("All")
-                icon: "dashboard"
-                type: CaelestiaApi.visuals.wallpaper.currentMediaFilter === "All" ? TextButton.Filled : TextButton.Tonal
-                onClicked: CaelestiaApi.visuals.wallpaper.currentMediaFilter = "All"
-            }
-            IconTextButton {
-                text: qsTr("Images")
-                icon: "image"
-                type: CaelestiaApi.visuals.wallpaper.currentMediaFilter === "Image" ? TextButton.Filled : TextButton.Tonal
-                onClicked: CaelestiaApi.visuals.wallpaper.currentMediaFilter = "Image"
-            }
-            IconTextButton {
-                text: qsTr("Animated")
-                icon: "animation"
-                type: CaelestiaApi.visuals.wallpaper.currentMediaFilter === "Animated" ? TextButton.Filled : TextButton.Tonal
-                onClicked: CaelestiaApi.visuals.wallpaper.currentMediaFilter = "Animated"
-            }
-            IconTextButton {
-                text: qsTr("Videos")
-                icon: "videocam"
-                type: CaelestiaApi.visuals.wallpaper.currentMediaFilter === "Video" ? TextButton.Filled : TextButton.Tonal
-                onClicked: CaelestiaApi.visuals.wallpaper.currentMediaFilter = "Video"
-            }
-          }
-
           StyledRect {
-              color: ShellConfig.Colours.layer(ShellConfig.Colours.palette.m3surfaceContainer, 2)
+              id: topSearchBar
+              anchors.top: parent.top
+              anchors.topMargin: 25
+              anchors.horizontalCenter: parent.horizontalCenter
+              z: 11
+
+              color: Qt.rgba(appWallpaper.colors.surface.r, appWallpaper.colors.surface.g, appWallpaper.colors.surface.b, 0.95)
+              border.width: 1
+              border.color: appWallpaper.colors.outline
               radius: ShellConfig.Tokens.rounding.full
               implicitWidth: searchIcon.implicitWidth + searchInput.width + ShellConfig.Tokens.padding.medium * 2 + ShellConfig.Tokens.spacing.small
               implicitHeight: searchInput.implicitHeight
@@ -243,7 +285,7 @@ Scope {
                   anchors.left: parent.left
                   anchors.leftMargin: ShellConfig.Tokens.padding.medium
                   text: "search"
-                  color: ShellConfig.Colours.palette.m3onSurfaceVariant
+                  color: appWallpaper.colors.surfaceText
               }
 
               StyledTextField {
@@ -253,6 +295,8 @@ Scope {
                   anchors.verticalCenter: parent.verticalCenter
                   width: 250
                   placeholderText: qsTr("Search wallpapers...")
+                  color: appWallpaper.colors.surfaceText
+                  placeholderTextColor: Qt.rgba(appWallpaper.colors.surfaceText.r, appWallpaper.colors.surfaceText.g, appWallpaper.colors.surfaceText.b, 0.6)
                   
                   topPadding: ShellConfig.Tokens.padding.medium
                   bottomPadding: ShellConfig.Tokens.padding.medium
@@ -268,48 +312,19 @@ Scope {
                   Keys.onEscapePressed: appWallpaper.showing = false
               }
           }
-        }
+
+
 
 
         Rectangle {
           anchors.fill: parent
-          color: appWallpaper.colors ? Qt.rgba(appWallpaper.colors.surfaceContainer.r,
-                                               appWallpaper.colors.surfaceContainer.g,
-                                               appWallpaper.colors.surfaceContainer.b, 0.95)
-                                    : Qt.rgba(0.08, 0.1, 0.14, 0.95)
+          z: -1
+          color: Qt.rgba(appWallpaper.colors.surfaceContainer.r,
+                         appWallpaper.colors.surfaceContainer.g,
+                         appWallpaper.colors.surfaceContainer.b, 0.95)
           radius: 20
-          visible: false
-          z: 50
-
-          Rectangle {
-            anchors.centerIn: parent
-            anchors.verticalCenterOffset: 12
-            width: 300
-            height: 4
-            radius: 2
-            color: Qt.rgba(1, 1, 1, 0.1)
-
-            Rectangle {
-              anchors.left: parent.left
-              anchors.top: parent.top
-              anchors.bottom: parent.bottom
-              radius: 2
-              width: 0
-              color: appWallpaper.colors ? appWallpaper.colors.primary : "#4fc3f7"
-              Behavior on width { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
-            }
-          }
-
-          Text {
-            anchors.centerIn: parent
-            anchors.verticalCenterOffset: -12
-            text: ""
-            color: appWallpaper.colors ? appWallpaper.colors.tertiary : "#8bceff"
-            font.family: Style.fontFamily
-            font.pixelSize: 12
-            font.weight: Font.Medium
-            font.letterSpacing: 0.5
-          }
+          clip: true
+          opacity: 0 // hidden per user request
         }
       }
     }
@@ -319,9 +334,9 @@ Scope {
       id: sliceListView
       visible: appWallpaper.cardVisible && appWallpaper.isSliceMode
       anchors.top: cardContainer.top
-      anchors.topMargin: appWallpaper.topBarHeight + 15
+      anchors.topMargin: appWallpaper.topBarHeight
       anchors.bottom: cardContainer.bottom
-      anchors.bottomMargin: 20
+      anchors.bottomMargin: appWallpaper.bottomBarHeight
       anchors.horizontalCenter: parent.horizontalCenter
       property int visibleCount: appWallpaper.visibleCount
       width: appWallpaper.expandedWidth + (visibleCount - 1) * (appWallpaper.sliceWidth + appWallpaper.sliceSpacing)
@@ -331,6 +346,7 @@ Scope {
       model: appWallpaper.cardVisible && appWallpaper.isSliceMode ? appWallpaper.wallpaperResults : null
       clip: false
       spacing: appWallpaper.sliceSpacing
+      keyNavigationEnabled: false
 
       flickDeceleration: 1500
       maximumFlickVelocity: 3000
@@ -378,21 +394,20 @@ Scope {
         NumberAnimation { properties: "x,y"; duration: Style.animMedium; easing.type: Easing.OutCubic }
       }
 
-      MouseArea {
-        anchors.fill: parent
-        propagateComposedEvents: true
-        onWheel: function(wheel) {
-          var step = 1
-          if (wheel.angleDelta.y > 0 || wheel.angleDelta.x > 0) {
-            sliceListView.currentIndex = Math.max(0, sliceListView.currentIndex - step)
-          } else if (wheel.angleDelta.y < 0 || wheel.angleDelta.x < 0) {
-            sliceListView.currentIndex = Math.min(appWallpaper.wallpaperResults.count - 1, sliceListView.currentIndex + step)
+
+      WheelHandler {
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+        onWheel: function(event) {
+          appWallpaper.interactionBlockerTimer.restart()
+          if (event.angleDelta.y > 0 || event.angleDelta.x > 0) {
+            appWallpaper.cyclePrev(1)
+          } else if (event.angleDelta.y < 0 || event.angleDelta.x < 0) {
+            appWallpaper.cycleNext(1)
           }
+          event.accepted = true
         }
-        onPressed: function(mouse) { mouse.accepted = false }
-        onReleased: function(mouse) { mouse.accepted = false }
-        onClicked: function(mouse) { mouse.accepted = false }
       }
+
 
       Keys.onPressed: event => {
         if (event.key === Qt.Key_Escape) {
@@ -402,7 +417,14 @@ Scope {
         }
 
 
-        if (event.text && event.text.length > 0 && !event.modifiers) {
+        
+        if (event.key === Qt.Key_Tab || event.key === Qt.Key_Right || event.key === Qt.Key_D || event.key === Qt.Key_Down || event.key === Qt.Key_S) {
+          appWallpaper.cycleNext(); event.accepted = true; return
+        }
+        if (event.key === Qt.Key_Backtab || event.key === Qt.Key_Left || event.key === Qt.Key_A || event.key === Qt.Key_Up || event.key === Qt.Key_W) {
+          appWallpaper.cyclePrev(); event.accepted = true; return
+        }
+if (event.text && event.text.length > 0 && !event.modifiers) {
           var c = event.text.charCodeAt(0)
           if (c >= 32 && c < 127) {
             searchInput.text += event.text
@@ -430,22 +452,6 @@ Scope {
           return
         }
 
-        sliceListView.keyboardNavActive = true
-
-        if (event.key === Qt.Key_Left) {
-          if (currentIndex > 0) {
-            currentIndex--
-          }
-          event.accepted = true
-          return
-        }
-        if (event.key === Qt.Key_Right) {
-          if (currentIndex < appWallpaper.wallpaperResults.count - 1) {
-            currentIndex++
-          }
-          event.accepted = true
-          return
-        }
       }
 
 
@@ -467,11 +473,21 @@ Scope {
 
     ListView {
       id: hexListView
+      focus: appWallpaper.showing && visible
+      Keys.onPressed: event => {
+
+        if (event.key === Qt.Key_Tab || event.key === Qt.Key_Right || event.key === Qt.Key_D || event.key === Qt.Key_Down || event.key === Qt.Key_S) {
+          appWallpaper.cycleNext(); event.accepted = true; return
+        }
+        if (event.key === Qt.Key_Backtab || event.key === Qt.Key_Left || event.key === Qt.Key_A || event.key === Qt.Key_Up || event.key === Qt.Key_W) {
+          appWallpaper.cyclePrev(); event.accepted = true; return
+        }
+      }
       visible: appWallpaper.cardVisible && appWallpaper.isHexMode
       anchors.top: cardContainer.top
-      anchors.topMargin: appWallpaper.topBarHeight + 15
+      anchors.topMargin: appWallpaper.topBarHeight
       anchors.bottom: cardContainer.bottom
-      anchors.bottomMargin: 20
+      anchors.bottomMargin: appWallpaper.bottomBarHeight
       anchors.left: cardContainer.left
       anchors.right: cardContainer.right
       orientation: ListView.Horizontal
@@ -519,6 +535,7 @@ Scope {
         : 0
 
       spacing: 0
+      keyNavigationEnabled: false
       highlightFollowsCurrentItem: true
       highlightMoveDuration: Style.animExpand
       highlight: Item {}
@@ -540,20 +557,20 @@ Scope {
         NumberAnimation { properties: "x,y"; duration: Style.animMedium; easing.type: Easing.OutCubic }
       }
 
-      MouseArea {
-        anchors.fill: parent
-        acceptedButtons: Qt.NoButton
-        onWheel: function(wheel) {
-          var step = Config.hexScrollStep
-          if (wheel.angleDelta.y > 0 || wheel.angleDelta.x > 0) {
-            hexListView.currentIndex = Math.max(0, hexListView.currentIndex - step)
-            hexListView._selectedCol = hexListView.currentIndex
-          } else if (wheel.angleDelta.y < 0 || wheel.angleDelta.x < 0) {
-            hexListView.currentIndex = Math.min(hexListView.count - 1, hexListView.currentIndex + step)
-            hexListView._selectedCol = hexListView.currentIndex
+
+      WheelHandler {
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+        onWheel: function(event) {
+          appWallpaper.interactionBlockerTimer.restart()
+          if (event.angleDelta.y > 0 || event.angleDelta.x > 0) {
+            appWallpaper.cyclePrev(1)
+          } else if (event.angleDelta.y < 0 || event.angleDelta.x < 0) {
+            appWallpaper.cycleNext(1)
           }
+          event.accepted = true
         }
       }
+
 
       property int _selectedCol: currentIndex
       property int _selectedRow: 0
@@ -633,9 +650,19 @@ Scope {
 
     GridView {
       id: thumbGridView
+      focus: appWallpaper.showing && visible
+      Keys.onPressed: event => {
+
+        if (event.key === Qt.Key_Tab || event.key === Qt.Key_Right || event.key === Qt.Key_D || event.key === Qt.Key_Down || event.key === Qt.Key_S) {
+          appWallpaper.cycleNext(); event.accepted = true; return
+        }
+        if (event.key === Qt.Key_Backtab || event.key === Qt.Key_Left || event.key === Qt.Key_A || event.key === Qt.Key_Up || event.key === Qt.Key_W) {
+          appWallpaper.cyclePrev(); event.accepted = true; return
+        }
+      }
       visible: appWallpaper.cardVisible && appWallpaper.isGridMode
       anchors.top: cardContainer.top
-      anchors.topMargin: appWallpaper.topBarHeight + 15
+      anchors.topMargin: appWallpaper.topBarHeight
       anchors.horizontalCenter: parent.horizontalCenter
       anchors.horizontalCenterOffset: appWallpaper._gridCellGap / 2
       width: appWallpaper._gridTotalW
@@ -644,6 +671,7 @@ Scope {
       cellHeight: Config.gridThumbHeight + appWallpaper._gridCellGap
       clip: true
       model: appWallpaper.cardVisible && appWallpaper.isGridMode ? appWallpaper.wallpaperResults : null
+      keyNavigationEnabled: false
       cacheBuffer: 300
       boundsBehavior: Flickable.StopAtBounds
       
@@ -693,13 +721,20 @@ Scope {
         else if (rowBottom > contentY + height) _snapScrollTo(rowBottom - height)
       }
 
-      MouseArea {
-        anchors.fill: parent
-        acceptedButtons: Qt.NoButton
-        onWheel: function(wheel) {
-          thumbGridView._snapScroll(wheel.angleDelta.y)
+
+      WheelHandler {
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+        onWheel: function(event) {
+          appWallpaper.interactionBlockerTimer.restart()
+          if (event.angleDelta.y > 0 || event.angleDelta.x > 0) {
+            appWallpaper.cyclePrev(1)
+          } else if (event.angleDelta.y < 0 || event.angleDelta.x < 0) {
+            appWallpaper.cycleNext(1)
+          }
+          event.accepted = true
         }
       }
+
 
       add: Transition {
         NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Style.animEnter; easing.type: Easing.OutCubic }
@@ -716,9 +751,9 @@ Scope {
         width: Config.gridThumbWidth
         height: Config.gridThumbHeight
         radius: 6
-        color: appWallpaper.colors ? Qt.rgba(appWallpaper.colors.surfaceContainer.r, appWallpaper.colors.surfaceContainer.g, appWallpaper.colors.surfaceContainer.b, 0.85) : Qt.rgba(0.1, 0.12, 0.18, 0.85)
+        color: Qt.rgba(appWallpaper.colors.surfaceContainer.r, appWallpaper.colors.surfaceContainer.g, appWallpaper.colors.surfaceContainer.b, 0.85)
         border.width: _gridMouse.containsMouse ? 2 : 0
-        border.color: appWallpaper.colors ? appWallpaper.colors.primary : "#4fc3f7"
+        border.color: appWallpaper.colors.primary
         clip: true
 
         readonly property bool _preferGlyph: false
@@ -737,7 +772,7 @@ Scope {
           text: "\ue04b"
           font.family: Style.fontFamilyIcons
           font.pixelSize: Math.min(parent.width, parent.height) * 0.45
-          color: appWallpaper.colors ? Qt.rgba(appWallpaper.colors.primary.r, appWallpaper.colors.primary.g, appWallpaper.colors.primary.b, 0.85) : Qt.rgba(1, 1, 1, 0.6)
+          color: Qt.rgba(appWallpaper.colors.primary.r, appWallpaper.colors.primary.g, appWallpaper.colors.primary.b, 0.85)
         }
 
         Rectangle {
@@ -770,53 +805,44 @@ Scope {
       }
     }
 
+    Row {
+      id: sourceFilterRow
+      anchors.bottom: cardContainer.bottom
+      anchors.bottomMargin: 25
+      anchors.horizontalCenter: parent.horizontalCenter
+      visible: appWallpaper.cardVisible
+      z: 11
+      spacing: ShellConfig.Tokens.spacing.small
 
-  }
-
-
-  Variants {
-    model: Quickshell.screens
-
-    Loader {
-      id: secondaryLoader
-      property var modelData
-      readonly property var _mainScreen: Quickshell.screens.find(s => s.name === appWallpaper.mainMonitor) ?? Quickshell.screens[0]
-      property bool isMainMonitor: modelData === _mainScreen || Quickshell.screens.length === 1
-      active: appWallpaper.showing && !isMainMonitor
-
-      sourceComponent: PanelWindow {
-        screen: secondaryLoader.modelData
-        visible: true
-        color: "transparent"
-
-        anchors { top: true; bottom: true; left: true; right: true }
-
-        WlrLayershell.namespace: "app-wallpaper-funnel-" + (screen ? screen.name : "x")
-        WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
-
-        exclusionMode: ExclusionMode.Ignore
-
-        Rectangle {
-          anchors.fill: parent
-          color: Qt.rgba(0, 0, 0, 0.5)
-          opacity: appWallpaper.cardVisible ? 1 : 0
-          Behavior on opacity { NumberAnimation { duration: 300 } }
-        }
-
-        MouseArea {
-          anchors.fill: parent
-          onClicked: appWallpaper.showing = false
-        }
-
-        FocusScope {
+      IconTextButton {
+          text: qsTr("Images")
+          icon: "image"
+          type: CaelestiaApi.visuals.wallpaper.currentMediaFilter === "Image" ? TextButton.Filled : TextButton.Tonal
+          onClicked: CaelestiaApi.visuals.wallpaper.currentMediaFilter = (CaelestiaApi.visuals.wallpaper.currentMediaFilter === "Image") ? "All" : "Image"
+      }
+      IconTextButton {
+          text: qsTr("Animated")
+          icon: "animation"
+          type: CaelestiaApi.visuals.wallpaper.currentMediaFilter === "Animated" ? TextButton.Filled : TextButton.Tonal
+          onClicked: CaelestiaApi.visuals.wallpaper.currentMediaFilter = (CaelestiaApi.visuals.wallpaper.currentMediaFilter === "Animated") ? "All" : "Animated"
+      }
+      IconTextButton {
+          text: qsTr("Videos")
+          icon: "videocam"
+          type: CaelestiaApi.visuals.wallpaper.currentMediaFilter === "Video" ? TextButton.Filled : TextButton.Tonal
+          onClicked: CaelestiaApi.visuals.wallpaper.currentMediaFilter = (CaelestiaApi.visuals.wallpaper.currentMediaFilter === "Video") ? "All" : "Video"
+      }
+    }
+  FocusScope {
           id: funnelScope
+          visible: !appWallpaper.isMainScreen
+          enabled: !appWallpaper.isMainScreen
           anchors.fill: parent
-          focus: true
+          focus: !appWallpaper.isMainScreen
           activeFocusOnTab: false
 
-          Component.onCompleted: forceActiveFocus()
-          onActiveFocusChanged: { if (!activeFocus) forceActiveFocus() }
+          Component.onCompleted: { if (!appWallpaper.isMainScreen) forceActiveFocus() }
+          onActiveFocusChanged: { if (!activeFocus && !appWallpaper.isMainScreen) forceActiveFocus() }
 
           Keys.onPressed: function(event) {
             if (event.key === Qt.Key_Escape) {
@@ -865,7 +891,4 @@ Scope {
             onHoveredChanged: if (hovered) funnelScope.forceActiveFocus()
           }
         }
-      }
-    }
-  }
 }

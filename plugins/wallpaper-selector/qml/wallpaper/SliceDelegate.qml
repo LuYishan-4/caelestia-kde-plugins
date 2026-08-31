@@ -158,7 +158,7 @@ Item {
         Rectangle {
             anchors.fill: parent
             visible: !bgImage.visible
-            color: delegateItem.colors ? Qt.rgba(delegateItem.colors.surfaceVariant.r, delegateItem.colors.surfaceVariant.g, delegateItem.colors.surfaceVariant.b, 0.8) : Qt.rgba(0.18, 0.20, 0.25, 0.8)
+            color: Qt.rgba(delegateItem.colors.surfaceVariant.r, delegateItem.colors.surfaceVariant.g, delegateItem.colors.surfaceVariant.b, 0.8)
         }
 
         Text {
@@ -167,7 +167,7 @@ Item {
             text: Images.isVideo(delegateItem.modelData.name) ? "\ue04b" : "\uf03e"
             font.family: Style.fontFamilyIcons
             font.pixelSize: 48
-            color: delegateItem.colors ? Qt.rgba(delegateItem.colors.primary.r, delegateItem.colors.primary.g, delegateItem.colors.primary.b, 0.7) : Qt.rgba(1, 1, 1, 0.5)
+            color: Qt.rgba(delegateItem.colors.primary.r, delegateItem.colors.primary.g, delegateItem.colors.primary.b, 0.7)
             visible: !bgImage.visible
         }
 
@@ -197,9 +197,9 @@ Item {
         ShapePath {
             fillColor: "transparent"
             strokeColor: delegateItem.isCurrent
-                ? (delegateItem.colors ? delegateItem.colors.primary : "#8BC34A")
+                ? (delegateItem.colors.primary)
                 : (delegateItem.isHovered
-                    ? Qt.rgba(delegateItem.colors ? delegateItem.colors.primary.r : 0.5, delegateItem.colors ? delegateItem.colors.primary.g : 0.76, delegateItem.colors ? delegateItem.colors.primary.b : 0.29, 0.4)
+                    ? Qt.rgba(delegateItem.colors.primary.r, delegateItem.colors.primary.g, delegateItem.colors.primary.b, 0.4)
                     : Qt.rgba(0, 0, 0, 0.6))
             Behavior on strokeColor { ColorAnimation { duration: Style.animNormal } }
             strokeWidth: delegateItem.isCurrent ? 3 : 1
@@ -231,9 +231,9 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: 11
-            color: Qt.rgba(0, 0, 0, 0.75)
+            color: Qt.rgba(delegateItem.colors.surfaceContainer.r, delegateItem.colors.surfaceContainer.g, delegateItem.colors.surfaceContainer.b, 0.85)
             border.width: 1
-            border.color: delegateItem.colors ? Qt.rgba(delegateItem.colors.primary.r, delegateItem.colors.primary.g, delegateItem.colors.primary.b, 0.4) : Qt.rgba(1, 1, 1, 0.2)
+            border.color: Qt.rgba(delegateItem.colors.primary.r, delegateItem.colors.primary.g, delegateItem.colors.primary.b, 0.4)
         }
 
         Text {
@@ -244,7 +244,7 @@ Item {
             font.pixelSize: 11
             font.weight: Font.Bold
             font.letterSpacing: 0.5
-            color: delegateItem.colors ? delegateItem.colors.tertiary : "#8bceff"
+            color: delegateItem.colors.surfaceText
         }
     }
 
@@ -257,6 +257,7 @@ Item {
         
         
         onPositionChanged: function(mouse) {
+            if (appWallpaper.blockHover) return
             if (!delegateItem._listView) return
             if (delegateItem._listView.moving) return
             var globalPos = mapToItem(delegateItem._listView, mouse.x, mouse.y)

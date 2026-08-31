@@ -89,7 +89,7 @@ Item {
             text: Images.isVideo(itemData ? itemData.name : "") ? "\ue04b" : "\uf03e"
             font.family: Style.fontFamilyIcons
             font.pixelSize: Math.max(24, hexItem.height * 0.4)
-            color: hexItem.colors ? Qt.rgba(hexItem.colors.primary.r, hexItem.colors.primary.g, hexItem.colors.primary.b, 0.85) : Qt.rgba(1, 1, 1, 0.6)
+            color: Qt.rgba(hexItem.colors.primary.r, hexItem.colors.primary.g, hexItem.colors.primary.b, 0.85)
             visible: bgImage.status !== Image.Ready
         }
 
@@ -111,7 +111,7 @@ Item {
         ShapePath {
             fillColor: "transparent"
             strokeColor: hexItem.isSelected
-                ? (hexItem.colors ? hexItem.colors.primary : Style.fallbackAccent)
+                ? (hexItem.colors.primary)
                 : Qt.rgba(0, 0, 0, 0.5)
             Behavior on strokeColor { ColorAnimation { duration: Style.animFast } }
             strokeWidth: hexItem.isSelected ? 3 : 1.5
@@ -132,9 +132,9 @@ Item {
         width: nameLabel.implicitWidth + 14
         height: 18
         radius: 9
-        color: Qt.rgba(0, 0, 0, 0.75)
+        color: Qt.rgba(hexItem.colors.surfaceContainer.r, hexItem.colors.surfaceContainer.g, hexItem.colors.surfaceContainer.b, 0.85)
         border.width: 1
-        border.color: hexItem.colors ? Qt.rgba(hexItem.colors.primary.r, hexItem.colors.primary.g, hexItem.colors.primary.b, 0.4) : Qt.rgba(1,1,1,0.2)
+        border.color: Qt.rgba(hexItem.colors.primary.r, hexItem.colors.primary.g, hexItem.colors.primary.b, 0.4)
         z: 5
         visible: hexItem._label.length > 0
 
@@ -143,7 +143,7 @@ Item {
             anchors.centerIn: parent
             text: hexItem._label
             font.family: Style.fontFamily; font.pixelSize: 10; font.weight: Font.Bold; font.letterSpacing: 0.5
-            color: hexItem.colors ? hexItem.colors.tertiary : "#8bceff"
+            color: hexItem.colors.surfaceText
         }
     }
 
@@ -159,6 +159,7 @@ Item {
             return dy <= hexItem._cos30 * hexItem._r && dx <= hexItem._r - dy * 0.57735
         }
         onContainsMouseChanged: {
+            if (appWallpaper.blockHover) return
             if (containsMouse) hexItem.hoverSelected()
         }
         onClicked: function(mouse) {
