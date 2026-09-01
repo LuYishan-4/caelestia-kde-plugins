@@ -139,6 +139,11 @@
       "description": "true = keep serving to existing installs but stop recommending for new installs.",
       "default": false
     },
+    "restart": {
+      "type": ["boolean", "string"],
+      "description": "Whether installing, removing, or toggling this plugin requires a shell restart.",
+      "default": false
+    },
     "replacement": {
       "type": "string",
       "description": "Id of the plugin that replaces this one (used with deprecated: true)."
