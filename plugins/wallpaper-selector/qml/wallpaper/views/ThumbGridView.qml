@@ -145,21 +145,23 @@ GridView {
     }
 
     delegate: Rectangle {
+        id: delegateItem
         required property var modelData
         required property int index
+
+        readonly property bool isCurrent: GridView.isCurrentItem || (root.currentIndex === index)
+        readonly property bool isHovered: _gridMouse.containsMouse
         
         width: Config.gridThumbWidth
         height: Config.gridThumbHeight
         radius: 6
         color: Qt.rgba(root.colors.surfaceContainer.r, root.colors.surfaceContainer.g, root.colors.surfaceContainer.b, 0.85)
-        border.width: _gridMouse.containsMouse ? 2 : 0
-        border.color: root.colors.primary
         clip: true
 
         readonly property bool _preferGlyph: false
         readonly property string _path: modelData.path
 
-                CachingImage {
+        CachingImage {
             anchors.fill: parent
             path: Images.isVideo(modelData.name) ? CaelestiaApi.visuals.wallpaper.thumbFor(modelData.path) : modelData.path
             horizontalAlignment: Image.AlignHCenter
@@ -181,7 +183,7 @@ GridView {
 
         Rectangle {
             anchors.fill: parent
-            color: Qt.rgba(0, 0, 0, _gridMouse.containsMouse ? 0.15 : 0.4)
+            color: Qt.rgba(0, 0, 0, isCurrent ? 0 : (isHovered ? 0.15 : 0.4))
             Behavior on color { ColorAnimation { duration: 150 } }
         }
 
@@ -194,6 +196,23 @@ GridView {
             font.pixelSize: 10
             font.weight: Font.Bold
             color: "#fff"
+        }
+
+        // Colored selection border (layered on top)
+        Rectangle {
+            id: thumbBorder
+            anchors.fill: parent
+            radius: 6
+            color: "transparent"
+            z: 10
+            border.width: isCurrent ? 3 : (isHovered ? 2 : 1)
+            border.color: isCurrent
+                ? root.colors.primary
+                : (isHovered
+                    ? Qt.rgba(root.colors.primary.r, root.colors.primary.g, root.colors.primary.b, 0.4)
+                    : Qt.rgba(0, 0, 0, 0.5))
+            Behavior on border.color { ColorAnimation { duration: 150 } }
+            Behavior on border.width { NumberAnimation { duration: 150 } }
         }
 
         MouseArea {
