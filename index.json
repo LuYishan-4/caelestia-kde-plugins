@@ -1,7 +1,7 @@
 {
   "format": "caelestia-plugin-index",
   "version": 1,
-  "generated": "2026-09-01T18:22:44Z",
+  "generated": "2026-09-01T20:18:51Z",
   "plugins": [
     {
       "id": "shimeji-cat",
@@ -36,6 +36,7 @@
       "mediaurl": "demo.mp4",
       "version": "1.0.0",
       "type": "quickshell",
+      "restart": true,
       "author": {
         "name": "ladybug-me",
         "url": "https://github.com/ladybug-me"
