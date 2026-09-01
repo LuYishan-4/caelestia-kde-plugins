@@ -65,10 +65,100 @@ PanelWindow {
       }
   }
 
+  property string currentWallpaperTab: "All"
+
+  Timer {
+    id: previewTimer
+    interval: 100
+    onTriggered: {
+      var idx = appWallpaper.currentSelectedIndex()
+      if (idx >= 0 && appWallpaper.wallpaperResults.values && idx < appWallpaper.wallpaperResults.values.length) {
+        var wall = appWallpaper.wallpaperResults.values[idx]
+        if (wall && wall.path) CaelestiaApi.visuals.wallpaper.preview(wall.path)
+      }
+    }
+  }
+
+  function currentSelectedIndex() {
+    if (appWallpaper.isSliceMode) return sliceListView.currentIndex
+    if (appWallpaper.isHexMode) return hexListView.currentIndex
+    if (appWallpaper.isGridMode) return thumbGridView.currentIndex
+    return -1
+  }
+
+  function selectIndex(targetIdx) {
+    if (targetIdx < 0) return
+    if (appWallpaper.isSliceMode) {
+      sliceListView.currentIndex = targetIdx
+      sliceListView.positionViewAtIndex(targetIdx, ListView.Center)
+    } else if (appWallpaper.isHexMode) {
+      hexListView.currentIndex = targetIdx
+      hexListView._selectedCol = targetIdx
+      hexListView.positionViewAtIndex(targetIdx, ListView.Center)
+    } else if (appWallpaper.isGridMode) {
+      thumbGridView.currentIndex = targetIdx
+      thumbGridView._ensureVisible(targetIdx)
+    }
+  }
+
   property var wallpaperResults: ScriptModel {
+    id: scriptModel
+
+    readonly property string search: {
+      const raw = (topSearchBar.text || "").trim()
+      if (raw.toLowerCase().startsWith("wall ")) {
+        return raw.split(" ").slice(1).join(" ").trim()
+      }
+      if (raw.toLowerCase() === "wall") {
+        return ""
+      }
+      return raw
+    }
+
     values: {
       var _dummy = CaelestiaApi.visuals.wallpaper.list;
-      return CaelestiaApi.visuals.wallpaper.query(topSearchBar.text);
+      let res = [];
+      const targetCategory = (appWallpaper.currentWallpaperTab && appWallpaper.currentWallpaperTab !== "All") ? appWallpaper.currentWallpaperTab : null;
+      const baseDir = Paths.wallsdir;
+
+      if (search) {
+        const allWalls = Array.from(CaelestiaApi.visuals.wallpaper.query(search) || []);
+        if (targetCategory === "Main") {
+          res = allWalls.filter(w => w.parentDir === baseDir);
+        } else if (targetCategory) {
+          res = allWalls.filter(w => {
+            let cat = (w.parentDir || "").slice(baseDir.length + 1);
+            if (cat.includes("/")) cat = cat.slice(0, cat.indexOf("/"));
+            return cat === targetCategory;
+          });
+        } else {
+          res = allWalls;
+        }
+      } else {
+        if (targetCategory && CaelestiaApi.visuals.wallpaper.grouped) {
+          res = Array.from(CaelestiaApi.visuals.wallpaper.grouped[targetCategory] || []);
+        } else {
+          const rawList = CaelestiaApi.visuals.wallpaper.list;
+          res = rawList ? Array.from(rawList) : [];
+        }
+      }
+      return res;
+    }
+
+    onValuesChanged: {
+      const currentPath = String(CaelestiaApi.visuals.wallpaper.actualCurrent || "").replace(/^file:\/\//, "").trim();
+      let idx = search ? 0 : (values ? values.findIndex(w => String(w.path || "").replace(/^file:\/\//, "").trim() === currentPath) : -1);
+      let targetIdx = Math.max(0, idx);
+      if (values && values.length > 0 && targetIdx >= 0 && targetIdx < values.length) {
+        appWallpaper.selectIndex(targetIdx);
+        previewTimer.restart();
+      }
+    }
+  }
+
+  Component.onDestruction: {
+    if (typeof CaelestiaApi.visuals.wallpaper.stopPreview === "function") {
+      CaelestiaApi.visuals.wallpaper.stopPreview()
     }
   }
 
@@ -83,6 +173,7 @@ PanelWindow {
       appWallpaper.hideMouse = false
       appWallpaper.canUnhideMouse = false
       hideMouseTimer.stop()
+      previewTimer.stop()
       cardVisible = false
       if (typeof CaelestiaApi.visuals.wallpaper.stopPreview === "function") {
           CaelestiaApi.visuals.wallpaper.stopPreview()
@@ -157,17 +248,7 @@ PanelWindow {
       }
       
       if (targetIdx >= 0) {
-        if (appWallpaper.isSliceMode) {
-          sliceListView.currentIndex = targetIdx
-          sliceListView.positionViewAtIndex(targetIdx, ListView.Center)
-        } else if (appWallpaper.isHexMode) {
-          hexListView.currentIndex = targetIdx
-          hexListView._selectedCol = targetIdx
-          hexListView.positionViewAtIndex(targetIdx, ListView.Center)
-        } else if (appWallpaper.isGridMode) {
-          thumbGridView.currentIndex = targetIdx
-          thumbGridView._ensureVisible(targetIdx)
-        }
+        appWallpaper.selectIndex(targetIdx)
       }
   }
 
@@ -463,10 +544,7 @@ PanelWindow {
             appWallpaper.closeRequested()
         }
         onCurrentIndexChanged: {
-            if (currentIndex >= 0 && appWallpaper.wallpaperResults.values && currentIndex < appWallpaper.wallpaperResults.values.length) {
-                var wall = appWallpaper.wallpaperResults.values[currentIndex]
-                if (wall) CaelestiaApi.visuals.wallpaper.preview(wall.path)
-            }
+            previewTimer.restart()
         }
         onEscapePressed: appWallpaper.closeRequested()
         onAppendSearchText: text => {
@@ -503,10 +581,7 @@ PanelWindow {
             appWallpaper.closeRequested()
         }
         onCurrentIndexChanged: {
-            if (currentIndex >= 0 && appWallpaper.wallpaperResults.values && currentIndex < appWallpaper.wallpaperResults.values.length) {
-                var wall = appWallpaper.wallpaperResults.values[currentIndex]
-                if (wall) CaelestiaApi.visuals.wallpaper.preview(wall.path)
-            }
+            previewTimer.restart()
         }
         onEscapePressed: appWallpaper.closeRequested()
         onAppendSearchText: text => {
@@ -545,10 +620,7 @@ PanelWindow {
             appWallpaper.closeRequested()
         }
         onCurrentIndexChanged: {
-            if (currentIndex >= 0 && appWallpaper.wallpaperResults.values && currentIndex < appWallpaper.wallpaperResults.values.length) {
-                var wall = appWallpaper.wallpaperResults.values[currentIndex]
-                if (wall) CaelestiaApi.visuals.wallpaper.preview(wall.path)
-            }
+            previewTimer.restart()
         }
         onEscapePressed: appWallpaper.closeRequested()
         onAppendSearchText: text => {
