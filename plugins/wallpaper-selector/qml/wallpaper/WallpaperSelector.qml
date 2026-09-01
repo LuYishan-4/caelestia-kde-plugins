@@ -546,7 +546,13 @@ PanelWindow {
         onCurrentIndexChanged: {
             previewTimer.restart()
         }
-        onEscapePressed: appWallpaper.closeRequested()
+        onEscapePressed: {
+            if (topSearchBar.text !== "") {
+                topSearchBar.text = ""
+            } else {
+                appWallpaper.closeRequested()
+            }
+        }
         onAppendSearchText: text => {
             appWallpaper.hideCursor(200)
             topSearchBar.appendSearchText(text)
@@ -583,7 +589,13 @@ PanelWindow {
         onCurrentIndexChanged: {
             previewTimer.restart()
         }
-        onEscapePressed: appWallpaper.closeRequested()
+        onEscapePressed: {
+            if (topSearchBar.text !== "") {
+                topSearchBar.text = ""
+            } else {
+                appWallpaper.closeRequested()
+            }
+        }
         onAppendSearchText: text => {
             appWallpaper.hideCursor(200)
             topSearchBar.appendSearchText(text)
@@ -622,7 +634,13 @@ PanelWindow {
         onCurrentIndexChanged: {
             previewTimer.restart()
         }
-        onEscapePressed: appWallpaper.closeRequested()
+        onEscapePressed: {
+            if (topSearchBar.text !== "") {
+                topSearchBar.text = ""
+            } else {
+                appWallpaper.closeRequested()
+            }
+        }
         onAppendSearchText: text => {
             appWallpaper.hideCursor(200)
             topSearchBar.appendSearchText(text)
