@@ -1,0 +1,4 @@
+WallpaperSelector 1.0 WallpaperSelector.qml
+SliceDelegate 1.0 SliceDelegate.qml
+HexDelegate 1.0 HexDelegate.qml
+ThumbDelegate 1.0 ThumbDelegate.qml
