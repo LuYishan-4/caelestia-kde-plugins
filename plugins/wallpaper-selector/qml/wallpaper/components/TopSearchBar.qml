@@ -15,6 +15,7 @@ StyledRect {
     signal escapePressed()
     signal accepted()
     signal settingsClicked()
+    signal searchInteracted()
 
     color: Qt.rgba(colors.secondaryContainer.r, colors.secondaryContainer.g, colors.secondaryContainer.b, 0.95)
     radius: ShellConfig.Tokens.rounding.large
@@ -48,6 +49,9 @@ StyledRect {
         onTextChanged: CaelestiaApi.visuals.wallpaper.searchText = text
         onAccepted: root.accepted()
         Keys.onEscapePressed: root.escapePressed()
+        Keys.onPressed: function(event) {
+            root.searchInteracted()
+        }
     }
 
     function forceSearchFocus() {

@@ -75,6 +75,9 @@ GridView {
     WheelHandler {
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: function(event) {
+            if (typeof appWallpaper !== "undefined" && typeof appWallpaper.hideCursor === "function") {
+                appWallpaper.hideCursor(100)
+            }
             root.interactionStarted()
             var now = Date.now()
             if (now - root.lastWheelTime < 100) {
@@ -100,12 +103,6 @@ GridView {
             return
         }
 
-        if (event.key === Qt.Key_Tab || event.key === Qt.Key_Right || event.key === Qt.Key_D || event.key === Qt.Key_Down || event.key === Qt.Key_S) {
-            root.cycleNext(1); event.accepted = true; return
-        }
-        if (event.key === Qt.Key_Backtab || event.key === Qt.Key_Left || event.key === Qt.Key_A || event.key === Qt.Key_Up || event.key === Qt.Key_W) {
-            root.cyclePrev(1); event.accepted = true; return
-        }
         if (event.text && event.text.length > 0 && !event.modifiers) {
             var c = event.text.charCodeAt(0)
             if (c >= 32 && c < 127) {

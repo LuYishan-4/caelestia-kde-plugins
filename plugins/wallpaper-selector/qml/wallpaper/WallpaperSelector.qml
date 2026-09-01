@@ -27,6 +27,44 @@ PanelWindow {
   property bool showing: false
   property bool isMainScreen: true
   
+  property bool hideMouse: false
+  property bool canUnhideMouse: false
+  property int defaultHideMouseDuration: 600
+
+  Timer {
+      id: hideMouseTimer
+      interval: appWallpaper.defaultHideMouseDuration
+      onTriggered: {
+          appWallpaper.canUnhideMouse = true
+          interval = appWallpaper.defaultHideMouseDuration
+      }
+  }
+
+  function hideCursor(delay) {
+      hideMouseTimer.stop()
+      hideMouseTimer.interval = (delay !== undefined && delay > 0) ? delay : appWallpaper.defaultHideMouseDuration
+      appWallpaper.canUnhideMouse = false
+      appWallpaper.hideMouse = true
+      hideCursorArea.lastX = -1
+      hideCursorArea.lastY = -1
+      hideMouseTimer.restart()
+  }
+
+  function centerCursor() {
+      var cx = 0
+      var cy = 0
+      if (appWallpaper.screen) {
+          cx = Math.round(appWallpaper.screen.x + appWallpaper.screen.width / 2)
+          cy = Math.round(appWallpaper.screen.y + appWallpaper.screen.height / 2)
+      } else {
+          cx = Math.round(appWallpaper.width / 2)
+          cy = Math.round(appWallpaper.height / 2)
+      }
+      if (typeof CUtils !== "undefined" && typeof CUtils.setCursorPos === "function") {
+          CUtils.setCursorPos(cx, cy)
+      }
+  }
+
   property var wallpaperResults: ScriptModel {
     values: {
       var _dummy = CaelestiaApi.visuals.wallpaper.list;
@@ -39,8 +77,12 @@ PanelWindow {
       if (topSearchBar.text !== "") {
           topSearchBar.text = ""
       }
+      appWallpaper.hideCursor(appWallpaper.defaultHideMouseDuration)
       cardShowTimer.restart()
     } else {
+      appWallpaper.hideMouse = false
+      appWallpaper.canUnhideMouse = false
+      hideMouseTimer.stop()
       cardVisible = false
       if (typeof CaelestiaApi.visuals.wallpaper.stopPreview === "function") {
           CaelestiaApi.visuals.wallpaper.stopPreview()
@@ -218,6 +260,7 @@ PanelWindow {
   property bool blockHover: interactionBlockerTimer.running
 
   function cycleNext(step) {
+      appWallpaper.hideCursor(100)
       if (!appWallpaper.wallpaperResults.values || appWallpaper.wallpaperResults.values.length === 0) return
       interactionBlockerTimer.restart()
       var s = step || 1
@@ -240,6 +283,7 @@ PanelWindow {
   }
 
   function cyclePrev(step) {
+      appWallpaper.hideCursor(100)
       if (!appWallpaper.wallpaperResults.values || appWallpaper.wallpaperResults.values.length === 0) return
       interactionBlockerTimer.restart()
       var s = step || 1
@@ -335,6 +379,17 @@ PanelWindow {
             z: 11
             colors: appWallpaper.colors
 
+            onTextChanged: {
+                if (appWallpaper.showing && appWallpaper.cardVisible) {
+                    appWallpaper.hideCursor(200)
+                }
+            }
+            onSearchInteracted: {
+                if (appWallpaper.showing && appWallpaper.cardVisible) {
+                    appWallpaper.hideCursor(200)
+                }
+            }
+
             onAccepted: {
                 var currentView = appWallpaper.isSliceMode ? sliceListView : (appWallpaper.isHexMode ? hexListView : thumbGridView)
                 if (currentView.currentIndex >= 0 && appWallpaper.wallpaperResults.values && currentView.currentIndex < appWallpaper.wallpaperResults.values.length) {
@@ -414,8 +469,14 @@ PanelWindow {
             }
         }
         onEscapePressed: appWallpaper.closeRequested()
-        onAppendSearchText: text => topSearchBar.appendSearchText(text)
-        onBackspaceSearchText: () => topSearchBar.backspaceSearchText()
+        onAppendSearchText: text => {
+            appWallpaper.hideCursor(200)
+            topSearchBar.appendSearchText(text)
+        }
+        onBackspaceSearchText: () => {
+            appWallpaper.hideCursor(200)
+            topSearchBar.backspaceSearchText()
+        }
         onInteractionStarted: interactionBlockerTimer.restart()
     }
 
@@ -448,8 +509,14 @@ PanelWindow {
             }
         }
         onEscapePressed: appWallpaper.closeRequested()
-        onAppendSearchText: text => topSearchBar.appendSearchText(text)
-        onBackspaceSearchText: () => topSearchBar.backspaceSearchText()
+        onAppendSearchText: text => {
+            appWallpaper.hideCursor(200)
+            topSearchBar.appendSearchText(text)
+        }
+        onBackspaceSearchText: () => {
+            appWallpaper.hideCursor(200)
+            topSearchBar.backspaceSearchText()
+        }
         onInteractionStarted: interactionBlockerTimer.restart()
         
         }
@@ -484,8 +551,14 @@ PanelWindow {
             }
         }
         onEscapePressed: appWallpaper.closeRequested()
-        onAppendSearchText: text => topSearchBar.appendSearchText(text)
-        onBackspaceSearchText: () => topSearchBar.backspaceSearchText()
+        onAppendSearchText: text => {
+            appWallpaper.hideCursor(200)
+            topSearchBar.appendSearchText(text)
+        }
+        onBackspaceSearchText: () => {
+            appWallpaper.hideCursor(200)
+            topSearchBar.backspaceSearchText()
+        }
         onInteractionStarted: interactionBlockerTimer.restart()
     }
 
@@ -525,12 +598,14 @@ PanelWindow {
             if (event.text && event.text.length > 0 && !event.modifiers) {
                 var c = event.text.charCodeAt(0)
                 if (c >= 32 && c < 127) {
+                    appWallpaper.hideCursor(200)
                     topSearchBar.appendSearchText(event.text)
                     event.accepted = true
                     return
                 }
             }
             if (event.key === Qt.Key_Backspace) {
+                appWallpaper.hideCursor(200)
                 topSearchBar.backspaceSearchText()
                 event.accepted = true
                 return
@@ -561,6 +636,58 @@ PanelWindow {
         HoverHandler {
             acceptedDevices: PointerDevice.AllDevices
             onHoveredChanged: if (hovered) funnelScope.forceActiveFocus()
+        }
+    }
+
+    WheelHandler {
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+        onWheel: function(event) {
+            appWallpaper.hideCursor(100)
+        }
+    }
+
+    MouseArea {
+        id: hideCursorArea
+        anchors.fill: parent
+        z: 99999
+        visible: appWallpaper.hideMouse
+        hoverEnabled: true
+        acceptedButtons: Qt.NoButton
+        cursorShape: Qt.BlankCursor
+
+        property real lastX: -1
+        property real lastY: -1
+
+        onVisibleChanged: {
+            if (visible) {
+                lastX = -1
+                lastY = -1
+            }
+        }
+
+        onPositionChanged: function(mouse) {
+            if (!appWallpaper.hideMouse) return
+
+            if (lastX < 0 || lastY < 0) {
+                lastX = mouse.x
+                lastY = mouse.y
+                return
+            }
+
+            var dx = Math.abs(mouse.x - lastX)
+            var dy = Math.abs(mouse.y - lastY)
+
+            if (!appWallpaper.canUnhideMouse) {
+                lastX = mouse.x
+                lastY = mouse.y
+                return
+            }
+
+            if (dx * dx + dy * dy > 25) {
+                appWallpaper.hideMouse = false
+                appWallpaper.canUnhideMouse = false
+                appWallpaper.centerCursor()
+            }
         }
     }
 }
