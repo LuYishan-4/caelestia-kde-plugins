@@ -241,14 +241,14 @@ Item {
                     onUpdated: val => Config.saveKey("components.appWallpaper.hexRadius", val)
                 }
                 SettingsStepper {
-                    label: "Rows"
+                    label: "No. of Rows"
                     subtext: "Rows in hex grid"
                     actualFrom: 1; actualTo: 10
                     actualValue: Config.hexRows
                     onUpdated: val => Config.saveKey("components.appWallpaper.hexRows", Math.round(val))
                 }
                 SettingsStepper {
-                    label: "Columns"
+                    label: "No. of Columns"
                     subtext: "Columns in hex grid"
                     actualFrom: 1; actualTo: 20
                     actualValue: Config.hexCols
@@ -259,6 +259,7 @@ Item {
                     subtext: "Hex layout curvature"
                     last: true
                     actualFrom: 0.0; actualTo: 3.0
+                    actualStep: 0.1
                     actualValue: Config.hexArcIntensity
                     onUpdated: val => Config.saveKey("components.appWallpaper.hexArcIntensity", val)
                 }
@@ -267,7 +268,7 @@ Item {
                 Common.SectionHeader { text: "Grid Mode" }
                 
                 SettingsStepper {
-                    label: "Columns"
+                    label: "No. of Columns"
                     subtext: "Number of columns"
                     first: true
                     actualFrom: 1; actualTo: 15
@@ -275,7 +276,7 @@ Item {
                     onUpdated: val => Config.saveKey("components.appWallpaper.gridColumns", Math.round(val))
                 }
                 SettingsStepper {
-                    label: "Rows"
+                    label: "No. of Rows"
                     subtext: "Number of rows"
                     actualFrom: 1; actualTo: 10
                     actualValue: Config.gridRows
@@ -306,22 +307,33 @@ Item {
         property real actualFrom: 0
         property real actualTo: 100
         property real actualValue: 0
+        property real actualStep: 1
+        
+        readonly property bool absolute: label.startsWith("No. of")
         
         signal updated(real val)
         
-        from: 0
-        to: 100
-        stepSize: 1
+        from: absolute ? actualFrom : 0
+        to: absolute ? actualTo : 100
+        stepSize: absolute ? actualStep : 1
         
         value: {
+            if (absolute) return actualValue
             if (actualTo === actualFrom) return 0
             var ratio = (actualValue - actualFrom) / (actualTo - actualFrom)
             return Math.round(Math.max(0.0, Math.min(1.0, ratio)) * 100)
         }
         
         onMoved: function(v) {
-            var val = actualFrom + (v / 100.0) * (actualTo - actualFrom)
-            updated(val)
+            if (absolute) {
+                updated(v)
+            } else {
+                var val = actualFrom + (v / 100.0) * (actualTo - actualFrom)
+                if (actualStep === 1 || actualStep === Math.floor(actualStep)) {
+                    val = Math.round(val)
+                }
+                updated(val)
+            }
         }
     }
 }
