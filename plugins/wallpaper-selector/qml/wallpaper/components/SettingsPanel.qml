@@ -19,11 +19,22 @@ Item {
     anchors.fill: parent
     visible: showing || opacity > 0
     opacity: showing ? 1 : 0
+    enabled: showing
     Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.InOutQuad } }
-    z: 1000
+    z: 2000
+    focus: showing
     
     onShowingChanged: {
-        console.log("SettingsPanel showing changed:", showing, "colors:", colors, "surfaceContainer:", colors ? colors.surfaceContainer : "null")
+        if (showing) {
+            root.forceActiveFocus()
+        }
+    }
+
+    Keys.onPressed: function(event) {
+        if (event.key === Qt.Key_Escape) {
+            root.showing = false
+            event.accepted = true
+        }
     }
     
     function openCaptureDialog(name, currentKey, targetItem) {
@@ -50,10 +61,15 @@ Item {
         }
     }
     
-    // Dim background
+    // Dim background - captures all clicks, hovers, and wheel events
     MouseArea {
         anchors.fill: parent
+        hoverEnabled: true
+        preventStealing: true
         onClicked: root.showing = false
+        onWheel: function(wheel) {
+            wheel.accepted = true
+        }
         
         Rectangle {
             anchors.fill: parent
@@ -71,6 +87,11 @@ Item {
         color: colors ? Qt.rgba(colors.surfaceContainer.r, colors.surfaceContainer.g, colors.surfaceContainer.b, 0.95) : "transparent"
         radius: ShellConfig.Tokens.rounding.extraLarge
         clip: true
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: {}
+        }
         
         // Scale and slide animation
         scale: root.showing ? 1.0 : 0.95

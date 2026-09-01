@@ -472,6 +472,7 @@ PanelWindow {
                 }
             }
 
+            enabled: !settingsPanel.showing
             onAccepted: {
                 var currentView = appWallpaper.isSliceMode ? sliceListView : (appWallpaper.isHexMode ? hexListView : thumbGridView)
                 if (currentView.currentIndex >= 0 && appWallpaper.wallpaperResults.values && currentView.currentIndex < appWallpaper.wallpaperResults.values.length) {
@@ -510,6 +511,7 @@ PanelWindow {
     Views.SliceView {
         id: sliceListView
         visible: appWallpaper.cardVisible && appWallpaper.isSliceMode
+        enabled: !settingsPanel.showing
         anchors.top: cardContainer.top
         anchors.topMargin: appWallpaper.topBarHeight
         anchors.bottom: cardContainer.bottom
@@ -524,9 +526,9 @@ PanelWindow {
         sliceSpacing: appWallpaper.sliceSpacing
         skewOffset: appWallpaper.skewOffset
 
-        focus: appWallpaper.showing
+        focus: appWallpaper.showing && !settingsPanel.showing
         onVisibleChanged: {
-            if (visible) forceActiveFocus()
+            if (visible && !settingsPanel.showing) forceActiveFocus()
         }
 
         Connections {
@@ -570,6 +572,7 @@ PanelWindow {
     Views.HexView {
         id: hexListView
         visible: appWallpaper.cardVisible && appWallpaper.isHexMode
+        enabled: !settingsPanel.showing
         anchors.top: cardContainer.top
         anchors.topMargin: appWallpaper.topBarHeight
         anchors.bottom: cardContainer.bottom
@@ -577,7 +580,7 @@ PanelWindow {
         anchors.left: cardContainer.left
         anchors.right: cardContainer.right
         
-        focus: appWallpaper.showing && visible
+        focus: appWallpaper.showing && visible && !settingsPanel.showing
         
         colors: appWallpaper.colors
         wallpaperData: appWallpaper.wallpaperResults.values
@@ -882,6 +885,7 @@ PanelWindow {
     Views.ThumbGridView {
         id: thumbGridView
         visible: appWallpaper.cardVisible && appWallpaper.isGridMode
+        enabled: !settingsPanel.showing
         anchors.top: cardContainer.top
         anchors.topMargin: appWallpaper.topBarHeight
         anchors.horizontalCenter: parent.horizontalCenter
@@ -889,7 +893,7 @@ PanelWindow {
         width: appWallpaper._gridTotalW
         height: appWallpaper._gridTotalH
         
-        focus: appWallpaper.showing && visible
+        focus: appWallpaper.showing && visible && !settingsPanel.showing
         
         colors: appWallpaper.colors
         model: appWallpaper.isGridMode ? appWallpaper.wallpaperResults : null
@@ -929,26 +933,38 @@ PanelWindow {
         anchors.bottomMargin: 25
         anchors.horizontalCenter: parent.horizontalCenter
         visible: appWallpaper.cardVisible
+        enabled: !settingsPanel.showing
         z: 11
     }
 
     Components.SettingsPanel {
         id: settingsPanel
         anchors.fill: parent
-        z: 99
+        z: 2000
         colors: appWallpaper.colors
+    }
+
+    Connections {
+        target: settingsPanel
+        function onShowingChanged() {
+            if (!settingsPanel.showing && appWallpaper.showing) {
+                if (appWallpaper.isSliceMode) sliceListView.forceActiveFocus()
+                else if (appWallpaper.isHexMode) hexListView.forceActiveFocus()
+                else if (appWallpaper.isGridMode) thumbGridView.forceActiveFocus()
+            }
+        }
     }
 
     FocusScope {
         id: funnelScope
-        visible: !appWallpaper.isMainScreen
-        enabled: !appWallpaper.isMainScreen
+        visible: !appWallpaper.isMainScreen && !settingsPanel.showing
+        enabled: !appWallpaper.isMainScreen && !settingsPanel.showing
         anchors.fill: parent
-        focus: !appWallpaper.isMainScreen
+        focus: !appWallpaper.isMainScreen && !settingsPanel.showing
         activeFocusOnTab: false
 
-        Component.onCompleted: { if (!appWallpaper.isMainScreen) forceActiveFocus() }
-        onActiveFocusChanged: { if (!activeFocus && !appWallpaper.isMainScreen) forceActiveFocus() }
+        Component.onCompleted: { if (!appWallpaper.isMainScreen && !settingsPanel.showing) forceActiveFocus() }
+        onActiveFocusChanged: { if (!activeFocus && !appWallpaper.isMainScreen && !settingsPanel.showing) forceActiveFocus() }
 
         Keys.onPressed: function(event) {
             if (event.key === Qt.Key_Escape) {
