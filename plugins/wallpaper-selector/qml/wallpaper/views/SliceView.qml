@@ -34,6 +34,30 @@ ListView {
     boundsBehavior: Flickable.StopAtBounds
     cacheBuffer: expandedWidth
 
+    property bool _initialSnap: true
+    onVisibleChanged: {
+        if (visible) {
+            _initialSnap = true
+            highlightMoveDuration = 0
+            if (currentIndex >= 0) {
+                positionViewAtIndex(currentIndex, ListView.Center)
+            }
+            _snapRestoreTimer.restart()
+        }
+    }
+
+    Timer {
+        id: _snapRestoreTimer
+        interval: 100
+        onTriggered: {
+            root.highlightMoveDuration = Style.animExpand
+            root._initialSnap = false
+            if (root.currentIndex >= 0) {
+                root.positionViewAtIndex(root.currentIndex, ListView.Center)
+            }
+        }
+    }
+
     highlightFollowsCurrentItem: true
     highlightMoveDuration: Style.animExpand
     highlight: Item {}

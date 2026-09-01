@@ -25,7 +25,13 @@ GridView {
     keyNavigationEnabled: false
     cacheBuffer: 300
     boundsBehavior: Flickable.StopAtBounds
-    
+
+    onVisibleChanged: {
+        if (visible && currentIndex >= 0) {
+            positionViewAtIndex(currentIndex, GridView.Center)
+            _ensureVisible(currentIndex)
+        }
+    }
 
 
     property real _scrollTarget: 0

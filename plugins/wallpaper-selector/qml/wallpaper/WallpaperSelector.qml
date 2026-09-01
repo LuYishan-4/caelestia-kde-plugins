@@ -81,7 +81,10 @@ PanelWindow {
 
   function currentSelectedIndex() {
     if (appWallpaper.isSliceMode) return sliceListView.currentIndex
-    if (appWallpaper.isHexMode) return hexListView.currentIndex
+    if (appWallpaper.isHexMode) {
+      var r = Math.max(1, Config.hexRows || 3)
+      return hexListView._selectedCol * r + hexListView._selectedRow
+    }
     if (appWallpaper.isGridMode) return thumbGridView.currentIndex
     return -1
   }
@@ -92,12 +95,46 @@ PanelWindow {
       sliceListView.currentIndex = targetIdx
       sliceListView.positionViewAtIndex(targetIdx, ListView.Center)
     } else if (appWallpaper.isHexMode) {
-      hexListView.currentIndex = targetIdx
-      hexListView._selectedCol = targetIdx
-      hexListView.positionViewAtIndex(targetIdx, ListView.Center)
+      var r = Math.max(1, Config.hexRows || 3)
+      var col = Math.floor(targetIdx / r)
+      var row = targetIdx % r
+      hexListView.currentIndex = col
+      hexListView._selectedCol = col
+      hexListView._selectedRow = row
+      hexListView.positionViewAtIndex(col, ListView.Center)
     } else if (appWallpaper.isGridMode) {
       thumbGridView.currentIndex = targetIdx
+      thumbGridView.positionViewAtIndex(targetIdx, GridView.Center)
       thumbGridView._ensureVisible(targetIdx)
+    }
+  }
+
+  function normalizePath(p) {
+    if (!p) return ""
+    var s = String(p).replace(/^file:\/\//, "").trim()
+    try { s = decodeURIComponent(s) } catch(e) {}
+    return s
+  }
+
+  function findActualCurrentIndex() {
+    var actual = normalizePath(CaelestiaApi.visuals.wallpaper ? (CaelestiaApi.visuals.wallpaper.actualCurrent || CaelestiaApi.visuals.wallpaper.current) : "")
+    if (!actual) return -1
+    var arr = appWallpaper.wallpaperResults ? appWallpaper.wallpaperResults.values : []
+    if (!arr || arr.length === 0) return -1
+    for (var i = 0; i < arr.length; i++) {
+      var w = arr[i]
+      if (w && w.path) {
+        var wp = normalizePath(w.path)
+        if (wp === actual) return i
+      }
+    }
+    return -1
+  }
+
+  function scrollToCurrent() {
+    var targetIdx = findActualCurrentIndex()
+    if (targetIdx >= 0) {
+      appWallpaper.selectIndex(targetIdx)
     }
   }
 
@@ -146,8 +183,7 @@ PanelWindow {
     }
 
     onValuesChanged: {
-      const currentPath = String(CaelestiaApi.visuals.wallpaper.actualCurrent || "").replace(/^file:\/\//, "").trim();
-      let idx = search ? 0 : (values ? values.findIndex(w => String(w.path || "").replace(/^file:\/\//, "").trim() === currentPath) : -1);
+      let idx = search ? 0 : appWallpaper.findActualCurrentIndex();
       let targetIdx = Math.max(0, idx);
       if (values && values.length > 0 && targetIdx >= 0 && targetIdx < values.length) {
         appWallpaper.selectIndex(targetIdx);
@@ -168,12 +204,15 @@ PanelWindow {
           topSearchBar.text = ""
       }
       appWallpaper.hideCursor(appWallpaper.defaultHideMouseDuration)
+      appWallpaper.scrollToCurrent()
       cardShowTimer.restart()
     } else {
       appWallpaper.hideMouse = false
       appWallpaper.canUnhideMouse = false
       hideMouseTimer.stop()
       previewTimer.stop()
+      scrollTimer.stop()
+      settleTimer.stop()
       cardVisible = false
       if (typeof CaelestiaApi.visuals.wallpaper.stopPreview === "function") {
           CaelestiaApi.visuals.wallpaper.stopPreview()
@@ -214,6 +253,7 @@ PanelWindow {
     interval: 50
     onTriggered: {
         appWallpaper.cardVisible = true
+        appWallpaper.scrollToCurrent()
         scrollTimer.restart()
     }
   }
@@ -223,32 +263,15 @@ PanelWindow {
       interval: 100
       onTriggered: {
           appWallpaper.scrollToCurrent()
+          settleTimer.restart()
       }
   }
 
-
-
-
-  function scrollToCurrent() {
-      var currentPath = String(CaelestiaApi.visuals.wallpaper.current || "").replace(/^file:\/\//, "").trim()
-      
-      var targetIdx = -1
-      var arr = appWallpaper.wallpaperResults ? appWallpaper.wallpaperResults.values : []
-      if (arr && arr.length > 0) {
-          for (var i = 0; i < arr.length; i++) {
-            var w = arr[i]
-            if (w && w.path) {
-              var wp = String(w.path).replace(/^file:\/\//, "").trim()
-              if (wp === currentPath) {
-                targetIdx = i
-                break
-              }
-            }
-          }
-      }
-      
-      if (targetIdx >= 0) {
-        appWallpaper.selectIndex(targetIdx)
+  Timer {
+      id: settleTimer
+      interval: 150
+      onTriggered: {
+          appWallpaper.scrollToCurrent()
       }
   }
 
@@ -345,22 +368,11 @@ PanelWindow {
       if (!appWallpaper.wallpaperResults.values || appWallpaper.wallpaperResults.values.length === 0) return
       interactionBlockerTimer.restart()
       var s = step || 1
-      var nextIdx = 0
       var count = appWallpaper.wallpaperResults.values.length
-      if (appWallpaper.isSliceMode) {
-        nextIdx = (sliceListView.currentIndex + s) % count
-        if (nextIdx < 0) nextIdx += count
-        sliceListView.currentIndex = nextIdx
-      } else if (appWallpaper.isHexMode) {
-        nextIdx = (hexListView.currentIndex + s) % count
-        if (nextIdx < 0) nextIdx += count
-        hexListView.currentIndex = nextIdx
-        hexListView._selectedCol = nextIdx
-      } else if (appWallpaper.isGridMode) {
-        nextIdx = (thumbGridView.currentIndex + s) % count
-        if (nextIdx < 0) nextIdx += count
-        thumbGridView.currentIndex = nextIdx
-      }
+      var cur = appWallpaper.currentSelectedIndex()
+      var nextIdx = (cur + s) % count
+      if (nextIdx < 0) nextIdx += count
+      appWallpaper.selectIndex(nextIdx)
   }
 
   function cyclePrev(step) {
@@ -368,22 +380,11 @@ PanelWindow {
       if (!appWallpaper.wallpaperResults.values || appWallpaper.wallpaperResults.values.length === 0) return
       interactionBlockerTimer.restart()
       var s = step || 1
-      var nextIdx = 0
       var count = appWallpaper.wallpaperResults.values.length
-      if (appWallpaper.isSliceMode) {
-        nextIdx = (sliceListView.currentIndex - s) % count
-        if (nextIdx < 0) nextIdx += count
-        sliceListView.currentIndex = nextIdx
-      } else if (appWallpaper.isHexMode) {
-        nextIdx = (hexListView.currentIndex - s) % count
-        if (nextIdx < 0) nextIdx += count
-        hexListView.currentIndex = nextIdx
-        hexListView._selectedCol = nextIdx
-      } else if (appWallpaper.isGridMode) {
-        nextIdx = (thumbGridView.currentIndex - s) % count
-        if (nextIdx < 0) nextIdx += count
-        thumbGridView.currentIndex = nextIdx
-      }
+      var cur = appWallpaper.currentSelectedIndex()
+      var nextIdx = (cur - s) % count
+      if (nextIdx < 0) nextIdx += count
+      appWallpaper.selectIndex(nextIdx)
   }
 
   property bool realShowing: appWallpaper.showing
