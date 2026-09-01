@@ -14,6 +14,7 @@ Thanks for contributing! This store is the official community appstore for the C
 1. Fork this repository and clone your fork.
 2. Copy `template-plugin/` to `plugins/<id>/`.
 3. Fill in `metadata.json`. Required fields: `id`, `name`, `description`, `version`, `type`, `author`, `license`. See [`schemas/plugin.schema.json`](schemas/plugin.schema.json).
+   - use `restart` if your plugin needs a shell restart after installation.
 4. Add a `LICENSE` file for your plugin (see [Licensing](#licensing)).
 5. Add your plugin content. Type-specific requirements:
    - `quickshell` - at least one `.qml` file.

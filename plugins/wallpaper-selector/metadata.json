@@ -6,6 +6,7 @@
   "mediaurl": "demo.mp4",
   "version": "1.0.0",
   "type": "quickshell",
+  "restart": true,
   "author": {
     "name": "ladybug-me",
     "url": "https://github.com/ladybug-me"

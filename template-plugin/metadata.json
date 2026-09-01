@@ -6,6 +6,7 @@
   "mediaurl": "media.gif",
   "version": "0.1.0",
   "type": "quickshell",
+  "restart": "false",
   "author": {
     "name": "Your Name",
     "url": "https://github.com/your-username"

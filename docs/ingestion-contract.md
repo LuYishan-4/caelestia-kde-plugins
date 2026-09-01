@@ -33,6 +33,7 @@ Validated against [`schemas/plugin.schema.json`](../schemas/plugin.schema.json) 
 | `homepage` | no | string (URI) | Full URL with scheme. |
 | `repository` | no | string (URI) | Full URL with scheme. |
 | `shell-compat` | no | object | `{ "min": "2.3", "max": "2.4" }` - Caelestia shell versions. |
+| `restart` | no | boolean | `true` = restart the shell automatically after installation finishes. Only set this when the plugin genuinely requires a shell restart. |
 | `dependencies` | no | array of string | Ids of other plugins. |
 | `kwineffect` | no | object | `{ "kpluginId": "…" }` - required for `type: "kwineffect"`. |
 | `deprecated` | no | boolean | `true` = keep serving existing installs, stop recommending. |
