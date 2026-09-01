@@ -360,8 +360,8 @@ PanelWindow {
   }
   property bool blockHover: interactionBlockerTimer.running
 
-  function cycleNext(step) {
-      appWallpaper.hideCursor(100)
+  function cycleNext(step, shouldHideCursor) {
+      if (shouldHideCursor !== false) appWallpaper.hideCursor(100)
       if (!appWallpaper.wallpaperResults.values || appWallpaper.wallpaperResults.values.length === 0) return
       interactionBlockerTimer.restart()
       var s = step || 1
@@ -372,8 +372,8 @@ PanelWindow {
       appWallpaper.selectIndex(nextIdx)
   }
 
-  function cyclePrev(step) {
-      appWallpaper.hideCursor(100)
+  function cyclePrev(step, shouldHideCursor) {
+      if (shouldHideCursor !== false) appWallpaper.hideCursor(100)
       if (!appWallpaper.wallpaperResults.values || appWallpaper.wallpaperResults.values.length === 0) return
       interactionBlockerTimer.restart()
       var s = step || 1
@@ -603,8 +603,137 @@ PanelWindow {
             topSearchBar.backspaceSearchText()
         }
         onInteractionStarted: interactionBlockerTimer.restart()
-        
+    }
+
+    // Hex View edge hover autoscroll regions (invisible, active only in Hex View)
+    Item {
+        id: hexEdgeRegions
+        visible: appWallpaper.showing && appWallpaper.cardVisible && appWallpaper.isHexMode && (typeof settingsPanel === "undefined" || !settingsPanel.showing)
+        anchors.fill: parent
+        z: 1000
+
+        Timer {
+            id: hexLeftScrollTimer
+            interval: 100
+            repeat: true
+            onTriggered: {
+                appWallpaper.cyclePrev(1, false)
+            }
         }
+
+        Timer {
+            id: hexRightScrollTimer
+            interval: 100
+            repeat: true
+            onTriggered: {
+                appWallpaper.cycleNext(1, false)
+            }
+        }
+
+        // Left invisible region
+        Item {
+            id: hexLeftContainer
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: 150
+            z: 1000
+
+            HoverHandler {
+                id: hexLeftHover
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
+                onHoveredChanged: {
+                    if (hovered) {
+                        appWallpaper.cyclePrev(1, false)
+                        hexLeftScrollTimer.restart()
+                    } else if (!hexLeftMouse.containsMouse) {
+                        hexLeftScrollTimer.stop()
+                    }
+                }
+            }
+
+            MouseArea {
+                id: hexLeftMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.ArrowCursor
+                onEntered: {
+                    appWallpaper.cyclePrev(1, false)
+                    hexLeftScrollTimer.restart()
+                }
+                onExited: {
+                    if (!hexLeftHover.hovered) {
+                        hexLeftScrollTimer.stop()
+                    }
+                }
+                onPositionChanged: {
+                    if (!hexLeftScrollTimer.running) {
+                        hexLeftScrollTimer.restart()
+                    }
+                }
+            }
+        }
+
+        // Right invisible region
+        Item {
+            id: hexRightContainer
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: 150
+            z: 1000
+
+            HoverHandler {
+                id: hexRightHover
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
+                onHoveredChanged: {
+                    if (hovered) {
+                        appWallpaper.cycleNext(1, false)
+                        hexRightScrollTimer.restart()
+                    } else if (!hexRightMouse.containsMouse) {
+                        hexRightScrollTimer.stop()
+                    }
+                }
+            }
+
+            MouseArea {
+                id: hexRightMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.ArrowCursor
+                onEntered: {
+                    appWallpaper.cycleNext(1, false)
+                    hexRightScrollTimer.restart()
+                }
+                onExited: {
+                    if (!hexRightHover.hovered) {
+                        hexRightScrollTimer.stop()
+                    }
+                }
+                onPositionChanged: {
+                    if (!hexRightScrollTimer.running) {
+                        hexRightScrollTimer.restart()
+                    }
+                }
+            }
+        }
+
+        Connections {
+            target: appWallpaper
+            function onShowingChanged() {
+                if (!appWallpaper.showing) {
+                    hexLeftScrollTimer.stop()
+                    hexRightScrollTimer.stop()
+                }
+            }
+            function onCardVisibleChanged() {
+                if (!appWallpaper.cardVisible) {
+                    hexLeftScrollTimer.stop()
+                    hexRightScrollTimer.stop()
+                }
+            }
+        }
+    }
 
     
         
