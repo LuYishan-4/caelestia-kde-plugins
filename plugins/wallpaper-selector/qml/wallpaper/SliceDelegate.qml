@@ -67,7 +67,7 @@ Item {
     readonly property bool _nearViewport: opacity > 0.01
 
     Behavior on width {
-        enabled: !suppressWidthAnim
+        enabled: !suppressWidthAnim && !(_listView && _listView._initialSnap)
         NumberAnimation { duration: Style.animExpand; easing.type: Easing.OutCubic }
     }
 

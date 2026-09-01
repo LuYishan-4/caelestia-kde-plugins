@@ -44,9 +44,6 @@ ListView {
         if (visible) {
             _initialSnap = true
             highlightMoveDuration = 0
-            if (currentIndex >= 0) {
-                positionViewAtIndex(currentIndex, ListView.Center)
-            }
             _snapRestoreTimer.restart()
         }
     }

@@ -93,7 +93,6 @@ PanelWindow {
     if (targetIdx < 0) return
     if (appWallpaper.isSliceMode) {
       sliceListView.currentIndex = targetIdx
-      sliceListView.positionViewAtIndex(targetIdx, ListView.Center)
     } else if (appWallpaper.isHexMode) {
       var r = Math.max(1, Config.hexRows || 3)
       var col = Math.floor(targetIdx / r)
@@ -101,10 +100,8 @@ PanelWindow {
       hexListView.currentIndex = col
       hexListView._selectedCol = col
       hexListView._selectedRow = row
-      hexListView.positionViewAtIndex(col, ListView.Center)
     } else if (appWallpaper.isGridMode) {
       thumbGridView.currentIndex = targetIdx
-      thumbGridView.positionViewAtIndex(targetIdx, GridView.Center)
       thumbGridView._ensureVisible(targetIdx)
     }
   }
@@ -517,7 +514,7 @@ PanelWindow {
         anchors.horizontalCenter: parent.horizontalCenter
         
         colors: appWallpaper.colors
-        model: appWallpaper.cardVisible && appWallpaper.isSliceMode ? appWallpaper.wallpaperResults : null
+        model: appWallpaper.isSliceMode ? appWallpaper.wallpaperResults : null
         visibleCount: appWallpaper.visibleCount
         expandedWidth: appWallpaper.expandedWidth
         sliceWidth: appWallpaper.sliceWidth
@@ -579,7 +576,7 @@ PanelWindow {
         
         colors: appWallpaper.colors
         wallpaperData: appWallpaper.wallpaperResults.values
-        model: (appWallpaper.cardVisible && appWallpaper.isHexMode) ? Math.ceil((appWallpaper.wallpaperResults.values ? appWallpaper.wallpaperResults.values.length : 0) / Math.max(1, Config.hexRows)) : 0
+        model: appWallpaper.isHexMode ? Math.ceil((appWallpaper.wallpaperResults.values ? appWallpaper.wallpaperResults.values.length : 0) / Math.max(1, Config.hexRows)) : 0
         
         onCycleNext: step => appWallpaper.cycleNext(step)
         onCyclePrev: step => appWallpaper.cyclePrev(step)
@@ -624,7 +621,7 @@ PanelWindow {
         focus: appWallpaper.showing && visible
         
         colors: appWallpaper.colors
-        model: appWallpaper.cardVisible && appWallpaper.isGridMode ? appWallpaper.wallpaperResults : null
+        model: appWallpaper.isGridMode ? appWallpaper.wallpaperResults : null
         
         onCycleNext: step => appWallpaper.cycleNext(step)
         onCyclePrev: step => appWallpaper.cyclePrev(step)

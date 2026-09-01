@@ -39,22 +39,16 @@ ListView {
         if (visible) {
             _initialSnap = true
             highlightMoveDuration = 0
-            if (currentIndex >= 0) {
-                positionViewAtIndex(currentIndex, ListView.Center)
-            }
             _snapRestoreTimer.restart()
         }
     }
 
     Timer {
         id: _snapRestoreTimer
-        interval: 100
+        interval: 50
         onTriggered: {
             root.highlightMoveDuration = Style.animExpand
             root._initialSnap = false
-            if (root.currentIndex >= 0) {
-                root.positionViewAtIndex(root.currentIndex, ListView.Center)
-            }
         }
     }
 
@@ -75,9 +69,11 @@ ListView {
         NumberAnimation { property: "opacity"; to: 0; duration: Style.animNormal; easing.type: Easing.InCubic }
     }
     displaced: Transition {
+        enabled: !root._initialSnap
         NumberAnimation { properties: "x,y"; duration: Style.animMedium; easing.type: Easing.OutCubic }
     }
     move: Transition {
+        enabled: !root._initialSnap
         NumberAnimation { properties: "x,y"; duration: Style.animMedium; easing.type: Easing.OutCubic }
     }
 
