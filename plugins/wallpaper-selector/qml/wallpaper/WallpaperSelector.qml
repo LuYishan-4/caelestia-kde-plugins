@@ -589,7 +589,12 @@ PanelWindow {
             CaelestiaApi.visuals.wallpaper.setWallpaper(path)
             appWallpaper.closeRequested()
         }
-        onCurrentIndexChanged: {
+        on_SelectedColChanged: {
+            if (appWallpaper.showing && appWallpaper.cardVisible) {
+                previewTimer.restart()
+            }
+        }
+        on_SelectedRowChanged: {
             if (appWallpaper.showing && appWallpaper.cardVisible) {
                 previewTimer.restart()
             }
