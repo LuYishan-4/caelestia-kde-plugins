@@ -1,3 +1,4 @@
+import qs.utils
 import QtQuick
 import qs.services.api
 import qs.services
@@ -155,12 +156,15 @@ GridView {
         readonly property bool _preferGlyph: false
         readonly property string _path: modelData.path
 
-        CachingImage {
+                CachingImage {
             anchors.fill: parent
             path: Images.isVideo(modelData.name) ? CaelestiaApi.visuals.wallpaper.thumbFor(modelData.path) : modelData.path
             horizontalAlignment: Image.AlignHCenter
             verticalAlignment: Image.AlignVCenter
             smooth: true
+            sourceSize.width: parent.width
+            sourceSize.height: parent.height
+            visible: status === Image.Ready
         }
 
         Text {
@@ -207,12 +211,5 @@ GridView {
         }
     }
     
-    Text {
-        anchors.centerIn: parent
-        z: 999
-        text: "ThumbGrid Items: " + root.count + " Size: " + root.width + "x" + root.height + " Cell: " + root.cellWidth + "x" + root.cellHeight
-        color: "red"
-        font.pixelSize: 24
-        visible: true
-    }
+    
 }

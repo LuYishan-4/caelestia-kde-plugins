@@ -454,9 +454,7 @@ PanelWindow {
         
         }
 
-    Views.TestDumper {
-            modelObject: appWallpaper.wallpaperResults
-        }
+    
         
         Views.ThumbGridView {
         id: thumbGridView

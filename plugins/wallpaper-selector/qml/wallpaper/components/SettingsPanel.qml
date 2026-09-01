@@ -153,7 +153,7 @@ Item {
                     subtext: "Layout style of the wallpaper browser"
                     first: true
                     last: false
-                    property var modeIds: ["slice", "hex", "grid"]
+                    property var modeIds: ["slice", "hex", "wall"]
                     active: menuItems[Math.max(0, modeIds.indexOf(Config.displayMode))]
                     
                     menuItems: [
