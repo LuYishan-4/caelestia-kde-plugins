@@ -747,9 +747,139 @@ PanelWindow {
         }
     }
 
-    
-        
-        Views.ThumbGridView {
+    // Thumb/Grid View edge hover autoscroll regions (invisible, active only in Grid View)
+    Item {
+        id: thumbEdgeRegions
+        visible: appWallpaper.showing && appWallpaper.cardVisible && appWallpaper.isGridMode && (typeof settingsPanel === "undefined" || !settingsPanel.showing)
+        anchors.fill: parent
+        z: 1000
+
+        readonly property int _stepCount: Math.max(1, Config.gridColumns || 4)
+
+        Timer {
+            id: thumbTopScrollTimer
+            interval: 300
+            repeat: true
+            onTriggered: {
+                appWallpaper.cyclePrev(thumbEdgeRegions._stepCount, false)
+            }
+        }
+
+        Timer {
+            id: thumbBottomScrollTimer
+            interval: 300
+            repeat: true
+            onTriggered: {
+                appWallpaper.cycleNext(thumbEdgeRegions._stepCount, false)
+            }
+        }
+
+        // Top invisible region (prev)
+        Item {
+            id: thumbTopContainer
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: 120
+            z: 1000
+
+            HoverHandler {
+                id: thumbTopHover
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
+                onHoveredChanged: {
+                    if (hovered) {
+                        appWallpaper.cyclePrev(thumbEdgeRegions._stepCount, false)
+                        thumbTopScrollTimer.restart()
+                    } else if (!thumbTopMouse.containsMouse) {
+                        thumbTopScrollTimer.stop()
+                    }
+                }
+            }
+
+            MouseArea {
+                id: thumbTopMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.ArrowCursor
+                onEntered: {
+                    appWallpaper.cyclePrev(thumbEdgeRegions._stepCount, false)
+                    thumbTopScrollTimer.restart()
+                }
+                onExited: {
+                    if (!thumbTopHover.hovered) {
+                        thumbTopScrollTimer.stop()
+                    }
+                }
+                onPositionChanged: {
+                    if (!thumbTopScrollTimer.running) {
+                        thumbTopScrollTimer.restart()
+                    }
+                }
+            }
+        }
+
+        // Bottom invisible region (next)
+        Item {
+            id: thumbBottomContainer
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: 120
+            z: 1000
+
+            HoverHandler {
+                id: thumbBottomHover
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
+                onHoveredChanged: {
+                    if (hovered) {
+                        appWallpaper.cycleNext(thumbEdgeRegions._stepCount, false)
+                        thumbBottomScrollTimer.restart()
+                    } else if (!thumbBottomMouse.containsMouse) {
+                        thumbBottomScrollTimer.stop()
+                    }
+                }
+            }
+
+            MouseArea {
+                id: thumbBottomMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.ArrowCursor
+                onEntered: {
+                    appWallpaper.cycleNext(thumbEdgeRegions._stepCount, false)
+                    thumbBottomScrollTimer.restart()
+                }
+                onExited: {
+                    if (!thumbBottomHover.hovered) {
+                        thumbBottomScrollTimer.stop()
+                    }
+                }
+                onPositionChanged: {
+                    if (!thumbBottomScrollTimer.running) {
+                        thumbBottomScrollTimer.restart()
+                    }
+                }
+            }
+        }
+
+        Connections {
+            target: appWallpaper
+            function onShowingChanged() {
+                if (!appWallpaper.showing) {
+                    thumbTopScrollTimer.stop()
+                    thumbBottomScrollTimer.stop()
+                }
+            }
+            function onCardVisibleChanged() {
+                if (!appWallpaper.cardVisible) {
+                    thumbTopScrollTimer.stop()
+                    thumbBottomScrollTimer.stop()
+                }
+            }
+        }
+    }
+
+    Views.ThumbGridView {
         id: thumbGridView
         visible: appWallpaper.cardVisible && appWallpaper.isGridMode
         anchors.top: cardContainer.top
