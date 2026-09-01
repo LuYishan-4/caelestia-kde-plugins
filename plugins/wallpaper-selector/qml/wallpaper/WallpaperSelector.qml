@@ -71,6 +71,7 @@ PanelWindow {
     id: previewTimer
     interval: 100
     onTriggered: {
+      if (!appWallpaper.showing || !appWallpaper.cardVisible) return
       var idx = appWallpaper.currentSelectedIndex()
       if (idx >= 0 && appWallpaper.wallpaperResults.values && idx < appWallpaper.wallpaperResults.values.length) {
         var wall = appWallpaper.wallpaperResults.values[idx]
@@ -184,7 +185,9 @@ PanelWindow {
       let targetIdx = Math.max(0, idx);
       if (values && values.length > 0 && targetIdx >= 0 && targetIdx < values.length) {
         appWallpaper.selectIndex(targetIdx);
-        previewTimer.restart();
+        if (appWallpaper.showing && appWallpaper.cardVisible && search) {
+          previewTimer.restart();
+        }
       }
     }
   }
@@ -542,7 +545,9 @@ PanelWindow {
             appWallpaper.closeRequested()
         }
         onCurrentIndexChanged: {
-            previewTimer.restart()
+            if (appWallpaper.showing && appWallpaper.cardVisible) {
+                previewTimer.restart()
+            }
         }
         onEscapePressed: {
             if (topSearchBar.text !== "") {
@@ -585,7 +590,9 @@ PanelWindow {
             appWallpaper.closeRequested()
         }
         onCurrentIndexChanged: {
-            previewTimer.restart()
+            if (appWallpaper.showing && appWallpaper.cardVisible) {
+                previewTimer.restart()
+            }
         }
         onEscapePressed: {
             if (topSearchBar.text !== "") {
@@ -759,7 +766,9 @@ PanelWindow {
             appWallpaper.closeRequested()
         }
         onCurrentIndexChanged: {
-            previewTimer.restart()
+            if (appWallpaper.showing && appWallpaper.cardVisible) {
+                previewTimer.restart()
+            }
         }
         onEscapePressed: {
             if (topSearchBar.text !== "") {
