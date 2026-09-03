@@ -48,7 +48,7 @@ RowLayout {
         spacing: Style.spacingSmall
 
         StepButton {
-            glyph: "\uF0374" // mdi-minus
+            glyph: "−"
             colors: root.colors
             clickEnabled: root.value > root.min
             onClicked: root.moved(root.value - 1)
@@ -61,11 +61,11 @@ RowLayout {
             font.family: Style.fontFamilyMono
             font.pixelSize: Style.fontBodyLarge
             color: colors ? colors.surfaceText : "#e0e0e0"
-            implicitWidth: Math.max(28, contentWidth)
+            Layout.minimumWidth: 28
         }
 
         StepButton {
-            glyph: "\uF0415" // mdi-plus
+            glyph: "+"
             colors: root.colors
             clickEnabled: root.value < root.max
             onClicked: root.moved(root.value + 1)
@@ -90,8 +90,9 @@ RowLayout {
         Text {
             anchors.centerIn: parent
             text: parent.glyph
-            font.family: Style.fontFamilyIcons
-            font.pixelSize: 16
+            font.family: Style.fontFamily
+            font.pixelSize: 18
+            baselineOffset: -1
             color: !parent.clickEnabled
                 ? (parent.colors ? parent.colors.outline : "#808080")
                 : (parent.colors ? parent.colors.surfaceText : "#e0e0e0")

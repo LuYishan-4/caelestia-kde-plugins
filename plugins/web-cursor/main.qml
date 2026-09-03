@@ -13,15 +13,20 @@ Scope {
     id: root
 
     property var config: WebCursorConfig {}
-    property var manager: WebCursorManager { config: root.config }
+    property var manager: WebCursorManager {
+        config: root.config
+        // Let the manager drop the fullscreen overlay before any pkexec prompt.
+        windowHider: () => { root.showing = false }
+    }
 
     property bool showing: false
     property bool buildingEffect: false
     property string buildStatusMessage: ""
 
-    readonly property string _pluginDir: _localPath(Qt.resolvedUrl("CMakeLists.txt"))
+    // ---- effect bootstrap (contents/ cmake) -------------------------------
+    readonly property string _pluginDir: _localPath(Qt.resolvedUrl("."))
 
-    function _localPath(url) {
+    function _localPath(url): string {
         const s = String(url || "").replace(/^file:\/\//, "")
         try { return decodeURIComponent(s) } catch (e) { return s }
     }
@@ -42,8 +47,7 @@ Scope {
         const script =
             'dir="$1"; ' +
             'cd "$dir" || { echo "plugin-dir-missing" >&2; exit 2; }; ' +
-            'if [ -f build/CMakeCache.txt ] && ' +
-            '   find build -name "ultralightwebcursor.so" -print -quit | grep -q .; then ' +
+            'if [ -f build/CMakeCache.txt ] && [ -f build/.webcursor-built ]; then ' +
             '  echo "ready"; exit 0; ' +
             'fi; ' +
             'if ! command -v cmake >/dev/null 2>&1; then ' +
@@ -53,6 +57,7 @@ Scope {
             'cmake -S . -B build >/dev/null 2>&1 || { echo "configure-failed" >&2; exit 4; }; ' +
             'echo "building"; ' +
             'cmake --build build -j 4 >/dev/null 2>&1 || { echo "build-failed" >&2; exit 5; }; ' +
+            'touch build/.webcursor-built; ' +
             'echo "built"'
 
         buildProc.command = ["sh", "-c", script, "--", dir]
@@ -97,9 +102,15 @@ Scope {
     }
 
     function registerShortcut() {
-        if (typeof CaelestiaApi === "undefined" || !CaelestiaApi.shortcuts) return
+        const hasApi = typeof CaelestiaApi !== "undefined" && !!CaelestiaApi.shortcuts
+        if (!hasApi) {
+            console.warn("[web-cursor] CaelestiaApi.shortcuts unavailable; settings shortcut disabled")
+            return
+        }
+        console.info("[web-cursor] registering shortcut", root.config.shortcut)
         CaelestiaApi.shortcuts.register("webcursor_settings", "Toggle Web Cursor Settings", root.config.shortcut, () => {
             root.showing = !root.showing
+            console.info("[web-cursor] shortcut fired, showing =", root.showing)
         })
     }
 
@@ -121,43 +132,33 @@ Scope {
         onTriggered: root.bootstrapEffect()
     }
 
-    Variants {
-        model: Quickshell.screens
+    // ---- settings overlay --------------------------------------------------
+    // The PanelWindow is created when the settings open and destroyed when they
+    // close. There is no persistent layer surface and no map/unmap of a live
+    // window, which removes the render-thread crash class seen before.
+    Loader {
+        id: settingsLoader
+        active: root.showing
 
-        PanelWindow {
-            required property var modelData
+        sourceComponent: Component {
+            PanelWindow {
+                id: panel
+                screen: Quickshell.primaryScreen
+                color: "transparent"
 
-            id: panel
-            screen: modelData
-            color: "transparent"
+                anchors { top: true; bottom: true; left: true; right: true }
+                WlrLayershell.namespace: "webcursor-settings"
 
-            // Cover the whole output (same trick as the wallpaper-selector plugin).
-            anchors { top: true; bottom: true; left: true; right: true }
-            WlrLayershell.namespace: "webcursor-settings"
-            property bool showing: false
+                Component.onCompleted: console.info("[web-cursor] overlay window created")
 
-            WebCursorSettingsPanel {
-                anchors.fill: parent
-                showing: panel.showing
-                colors: Colors {}
-                config: root.config
-                manager: root.manager
-                buildStatus: root.buildStatusMessage
-                onCloseRequested: panel.showing = false
-            }
-
-            // Mirror the toggle from the plugin root…
-            Connections {
-                target: root
-                function onShowingChanged() {
-                    if (panel.showing !== root.showing) {
-                        panel.showing = root.showing
-                    }
-                }
-            }
-            onShowingChanged: {
-                if (!panel.showing && root.showing) {
-                    root.showing = false
+                WebCursorSettingsPanel {
+                    anchors.fill: parent
+                    showing: true
+                    colors: Colors {}
+                    config: root.config
+                    manager: root.manager
+                    buildStatus: root.buildStatusMessage
+                    onCloseRequested: root.showing = false
                 }
             }
         }

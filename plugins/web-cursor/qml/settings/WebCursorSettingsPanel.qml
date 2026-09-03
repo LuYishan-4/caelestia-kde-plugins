@@ -8,7 +8,9 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
-import QtQuick.Dialogs
+import Quickshell
+import Quickshell.Io
+import qs.components.controls
 import ".."
 import "../components"
 
@@ -99,10 +101,8 @@ Item {
                 }
 
                 IconButton {
-                    glyph: "\uF00D" // nf-fa-times (Symbols Nerd Font)
-                    iconFont: Style.fontFamilyNerdIcons
-                    colors: root.colors
-                    tip: qsTr("Close")
+                    icon: "close"
+                    type: IconButton.Text
                     onClicked: root.closeRequested()
                 }
             }
@@ -154,6 +154,7 @@ Item {
                         Layout.fillWidth: true
                         colors: root.colors
                         SwitchRow {
+                            id: enableRow
                             anchors.fill: parent
                             text: qsTr("Enable Web Cursor")
                             subtext: qsTr("Render the selected HTML/CSS cursor through KWin")
@@ -161,6 +162,7 @@ Item {
                             colors: root.colors
                             onToggled: on => { on ? root.manager.enable() : root.manager.disable() }
                         }
+                        implicitHeight: enableRow.implicitHeight + padding * 2
                     }
 
                     // ---- Theme picker -------------------------------------------
@@ -175,18 +177,32 @@ Item {
                             first: true
                         }
                         IconButton {
-                            glyph: "\uF0415" // mdi-plus
-                            colors: root.colors
-                            tonal: true
-                            tip: qsTr("Install theme from folder")
-                            onClicked: themeUploadDialog.open()
+                            icon: "add"
+                            type: IconButton.Tonal
+                            onClicked: root.openFolderPicker()
                         }
                     }
 
                     RowCard {
                         Layout.fillWidth: true
                         colors: root.colors
+                        SwitchRow {
+                            id: installGlobalRow
+                            anchors.fill: parent
+                            text: qsTr("Install system-wide")
+                            subtext: qsTr("Copy uploaded themes to /usr/share/caelestia/webcursor (asks for your password)")
+                            checked: root.config ? root.config.installGlobal : false
+                            colors: root.colors
+                            onToggled: on => { if (root.config) root.config.installGlobal = on }
+                        }
+                        implicitHeight: installGlobalRow.implicitHeight + padding * 2
+                    }
+
+                    RowCard {
+                        Layout.fillWidth: true
+                        colors: root.colors
                         RowLayout {
+                            id: currentThemeRow
                             anchors.fill: parent
                             spacing: Style.spacingLarge
 
@@ -209,12 +225,12 @@ Item {
                                 }
                             }
                             IconButton {
-                                glyph: "\uF0450" // mdi-refresh
-                                colors: root.colors
-                                tip: qsTr("Reload themes")
+                                icon: "refresh"
+                                type: IconButton.Text
                                 onClicked: root.manager.reload()
                             }
                         }
+                        implicitHeight: currentThemeRow.implicitHeight + padding * 2
                     }
 
                     Repeater {
@@ -226,8 +242,10 @@ Item {
 
                             Layout.fillWidth: true
                             colors: root.colors
+                            implicitHeight: themeRow.implicitHeight + padding * 2
 
                             RowLayout {
+                                id: themeRow
                                 anchors.fill: parent
                                 spacing: Style.spacingLarge
 
@@ -275,24 +293,19 @@ Item {
 
                                 IconButton {
                                     readonly property bool active: root.config && root.config.selectTheme === modelData
-                                    glyph: active ? "\uF012C" : "\uF040A" // mdi-check / mdi-play
-                                    colors: root.colors
-                                    filled: active
-                                    tonal: !active
-                                    tip: active ? qsTr("Current theme") : qsTr("Apply")
+                                    icon: active ? "check" : "play_arrow"
+                                    type: IconButton.Text
                                     onClicked: root.manager.useTheme(modelData)
                                 }
                                 IconButton {
-                                    glyph: "\uF0770" // mdi-folder-open
-                                    colors: root.colors
-                                    tip: qsTr("Open theme folder")
+                                    icon: "folder_open"
+                                    type: IconButton.Text
                                     onClicked: root.manager.openThemeFolder(modelData)
                                 }
                                 IconButton {
                                     visible: root.manager.isUserTheme(modelData)
-                                    glyph: "\uF0226" // mdi-delete
-                                    colors: root.colors
-                                    tip: qsTr("Remove theme")
+                                    icon: "delete"
+                                    type: IconButton.Text
                                     onClicked: root.manager.removeTheme(modelData)
                                 }
                             }
@@ -311,6 +324,7 @@ Item {
                         Layout.fillWidth: true
                         colors: root.colors
                         StepperRow {
+                            id: widthRow
                             anchors.fill: parent
                             text: qsTr("Cursor width")
                             subtext: qsTr("Render width in pixels")
@@ -323,12 +337,14 @@ Item {
                                 root.manager.save()
                             }
                         }
+                        implicitHeight: widthRow.implicitHeight + padding * 2
                     }
 
                     RowCard {
                         Layout.fillWidth: true
                         colors: root.colors
                         StepperRow {
+                            id: heightRow
                             anchors.fill: parent
                             text: qsTr("Cursor height")
                             subtext: qsTr("Render height in pixels")
@@ -341,6 +357,7 @@ Item {
                                 root.manager.save()
                             }
                         }
+                        implicitHeight: heightRow.implicitHeight + padding * 2
                     }
 
                     // ---- Ignored applications --------------------------------------
@@ -355,6 +372,7 @@ Item {
                         Layout.fillWidth: true
                         colors: root.colors
                         ColumnLayout {
+                            id: blacklistColumn
                             anchors.fill: parent
                             spacing: Style.spacingSmall
 
@@ -374,10 +392,8 @@ Item {
                                         elide: Text.ElideRight
                                     }
                                     IconButton {
-                                        glyph: "\uF0156" // mdi-close
-                                        colors: root.colors
-                                        size: 24
-                                        tip: qsTr("Remove")
+                                        icon: "close"
+                                        type: IconButton.Text
                                         onClicked: root.manager.removeBlacklist(modelData)
                                     }
                                 }
@@ -405,14 +421,13 @@ Item {
                                     onAccepted: addBlacklistFromInput()
                                 }
                                 IconButton {
-                                    glyph: "\uF0415" // mdi-plus
-                                    colors: root.colors
-                                    tonal: true
-                                    tip: qsTr("Add to ignore list")
+                                    icon: "add"
+                                    type: IconButton.Tonal
                                     onClicked: addBlacklistFromInput()
                                 }
                             }
                         }
+                        implicitHeight: blacklistColumn.implicitHeight + padding * 2
                     }
 
                     // ---- Status -----------------------------------------------------
@@ -430,16 +445,221 @@ Item {
         }
     }
 
-    FolderDialog {
-        id: themeUploadDialog
-        title: qsTr("Choose a cursor theme folder")
-        acceptLabel: qsTr("Install")
-        onAccepted: {
-            const raw = selectedFolder
-            const folder = typeof raw === "string"
-                ? raw
-                : raw.toString().replace(/^file:\/\//, "")
-            root.manager.uploadTheme(folder, "")
+    // ---- built-in folder picker ------------------------------------------
+    // QtQuick.Dialogs.FolderDialog segfaults inside Quickshell layer-shell
+    // windows (and kdialog is not guaranteed to be installed), so theme
+    // install uses this tiny in-plugin directory browser instead.
+    property bool pickerOpen: false
+    property string pickerPath: "/"
+    property var pickerItems: []
+
+    function openFolderPicker() {
+        root.pickerPath = Quickshell.env("HOME") || "/"
+        root.refreshPicker()
+        root.pickerOpen = true
+    }
+
+    function _pickerParent(path) {
+        const p = String(path || "").replace(/\/+$/, "")
+        if (!p || p === "/") return "/"
+        const i = p.lastIndexOf("/")
+        if (i <= 0) return "/"
+        return p.substring(0, i)
+    }
+
+    function _pickerJoin(path, name) {
+        return String(path || "/").replace(/\/+$/, "") + "/" + name
+    }
+
+    function refreshPicker() {
+        pickerListProc.command = ["sh", "-c",
+            'p="$1"; [ -d "$p" ] || exit 0; ' +
+            'for d in "$p"/*/; do ' +
+            '  [ -d "$d" ] || continue; ' +
+            '  n=$(basename "$d"); ' +
+            '  if [ -f "$d/index.html" ] && [ -f "$d/CursorData.json" ]; then k="theme"; else k="dir"; fi; ' +
+            '  printf "%s|%s\\n" "$n" "$k"; done',
+            "--", root.pickerPath]
+        pickerListProc.running = true
+    }
+
+    function pickerSelect(item) {
+        if (!item) return
+        if (item.kind === "up") {
+            root.pickerPath = root._pickerParent(root.pickerPath)
+            root.refreshPicker()
+        } else if (item.kind === "dir") {
+            root.pickerPath = root._pickerJoin(root.pickerPath, item.label)
+            root.refreshPicker()
+        } else if (item.kind === "theme") {
+            root.pickerOpen = false
+            root.manager.uploadTheme(root._pickerJoin(root.pickerPath, item.label), "")
+        }
+    }
+
+    property Process pickerListProc: Process {
+        id: pickerListProc
+        stdout: StdioCollector {
+            id: pickerOut
+            onStreamFinished: {
+                const items = []
+                if (root.pickerPath !== "/")
+                    items.push({ label: "..", kind: "up" })
+                const lines = (pickerOut.text || "").split("\n")
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim()
+                    if (!line) continue
+                    const parts = line.split("|")
+                    if (parts.length < 2) continue
+                    items.push({ label: parts[0], kind: parts[1] })
+                }
+                root.pickerItems = items
+            }
+        }
+    }
+
+    // Picker overlay ---------------------------------------------------------
+    Rectangle {
+        visible: root.pickerOpen
+        anchors.fill: parent
+        color: "transparent"
+        z: 100
+
+        // Scrim: click outside to cancel.
+        MouseArea {
+            anchors.fill: parent
+            onClicked: root.pickerOpen = false
+
+            Rectangle {
+                anchors.fill: parent
+                color: "black"
+                opacity: 0.5
+            }
+        }
+
+        Rectangle {
+            width: Math.min(620, parent.width - 80)
+            height: Math.min(480, parent.height - 120)
+            anchors.centerIn: parent
+            radius: Style.radiusXLarge + 4
+            color: colors ? colors.surfaceContainer : "#111111"
+            clip: true
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {}
+            }
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: Style.paddingLarge
+                spacing: Style.spacingMedium
+
+                RowLayout {
+                    Layout.fillWidth: true
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Install cursor theme")
+                        font.family: Style.fontFamilyHeading
+                        font.pixelSize: Style.fontTitleLarge
+                        font.weight: Font.DemiBold
+                        color: colors ? colors.surfaceText : "#e0e0e0"
+                    }
+                    IconButton {
+                        icon: "close"
+                        type: IconButton.Text
+                        onClicked: root.pickerOpen = false
+                    }
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: root.pickerPath
+                    font.family: Style.fontFamilyMono
+                    font.pixelSize: Style.fontCaption
+                    color: colors ? colors.surfaceVariantText : "#b0b0b0"
+                    elide: Text.ElideMiddle
+                }
+
+                ListView {
+                    id: pickerList
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    model: root.pickerItems
+
+                    delegate: Rectangle {
+                        required property var modelData
+
+                        width: ListView.view.width
+                        height: 42
+                        radius: Style.radiusMedium
+                        color: mouse.containsMouse
+                            ? (colors ? colors.surfaceVariant : "#33ffffff")
+                            : "transparent"
+
+                        RowLayout {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.leftMargin: Style.paddingMedium
+                            anchors.rightMargin: Style.paddingMedium
+                            spacing: Style.spacingMedium
+
+                            Text {
+                                Layout.fillWidth: true
+                                text: modelData.label
+                                font.family: Style.fontFamily
+                                font.pixelSize: Style.fontBodyLarge
+                                color: colors ? colors.surfaceText : "#e0e0e0"
+                                elide: Text.ElideRight
+                            }
+
+                            Rectangle {
+                                visible: modelData.kind === "theme"
+                                radius: Style.radiusSmall
+                                color: colors ? colors.primaryContainer : "transparent"
+                                height: 20
+                                width: badgeText.implicitWidth + Style.paddingMedium
+
+                                Text {
+                                    id: badgeText
+                                    anchors.centerIn: parent
+                                    text: qsTr("cursor theme")
+                                    font.family: Style.fontFamily
+                                    font.pixelSize: Style.fontTiny
+                                    color: colors ? colors.primaryContainerText : "#ffffff"
+                                }
+                            }
+
+                            Text {
+                                text: modelData.kind === "up" ? "\u2191" : "\u203A"
+                                font.family: Style.fontFamily
+                                font.pixelSize: Style.fontBodyLarge
+                                color: colors ? colors.surfaceVariantText : "#b0b0b0"
+                            }
+                        }
+
+                        MouseArea {
+                            id: mouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.pickerSelect(modelData)
+                        }
+                    }
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: qsTr("Open the theme folder and tap it when it is marked \"cursor theme\".")
+                    font.family: Style.fontFamily
+                    font.pixelSize: Style.fontCaption
+                    color: colors ? colors.surfaceVariantText : "#b0b0b0"
+                    wrapMode: Text.WordWrap
+                }
+            }
         }
     }
 

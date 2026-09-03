@@ -20,16 +20,26 @@ QtObject {
     // Instance of WebCursorConfig (Config.qml); assigned by main.qml.
     property var config: null
 
+    // Callback used by main.qml to hide the fullscreen settings overlay before
+    // a pkexec (polkit) prompt is shown, otherwise the password dialog ends up
+    // covered and unreachable.
+    property var windowHider: null
+
+    function _hideWindow() {
+        if (typeof root.windowHider === "function") root.windowHider()
+    }
+
     signal themeUploadFinished(bool success, string error)
     signal themeRemoveFinished(bool success, string error)
 
     property var themeList: []
     property var _themeKinds: ({})
+    property var _themeDetails: ({})
     property string statusMessage: ""
 
     readonly property string systemThemesDir: "/usr/share/caelestia/webcursor"
 
-    function userThemesDir() {
+    function userThemesDir(): string {
         return root.config ? root.config.themesDir : ""
     }
 
@@ -62,17 +72,21 @@ QtObject {
     }
 
     // ---- theme listing -----------------------------------------------------
-    // Lists every valid theme folder in the user themes dir. A line looks like
-    // "<name>|user" for a real (uploaded) theme or "<name>|system" for a
-    // symlink to the built-in themes.
-    function refreshThemes() {
+    // Lists every valid theme folder in the user themes dir. Each output line
+    // carries the theme kind plus its CursorData.json (base64), so details and
+    // icons can be shown without XMLHttpRequest on file:// (disabled in the
+    // shell runtime):
+    //   <name>|<kind>|<base64-CursorData.json>
+    function refreshThemes(): void {
         listProc.command = ["sh", "-c",
             'dir="$1"; [ -d "$dir" ] || exit 0; ' +
             'for d in "$dir"/*/; do ' +
             '  [ -d "$d" ] || continue; ' +
             '  n=$(basename "$d"); ' +
             '  [ -f "$d/CursorData.json" ] && [ -f "$d/index.html" ] || continue; ' +
-            '  if [ -L "$d" ]; then echo "$n|system"; else echo "$n|user"; fi; ' +
+            '  if [ -L "$d" ]; then k="system"; else k="user"; fi; ' +
+            '  b64=$(base64 -w0 "$d/CursorData.json" 2>/dev/null); ' +
+            '  printf "%s|%s|%s\\n" "$n" "$k" "$b64"; ' +
             'done',
             "--", root.userThemesDir()]
         listProc.running = true
@@ -85,23 +99,42 @@ QtObject {
             onStreamFinished: {
                 const names = []
                 const kinds = {}
+                const details = {}
+                const base = root.userThemesDir()
                 const lines = (listStdout.text || "").split("\n")
                 for (let i = 0; i < lines.length; i++) {
                     const line = lines[i].trim()
                     if (!line) continue
-                    const sep = line.lastIndexOf("|")
-                    if (sep <= 0) continue
-                    const name = line.substring(0, sep)
-                    kinds[name] = line.substring(sep + 1)
+                    const parts = line.split("|")
+                    if (parts.length < 2) continue
+                    const name = parts[0]
+                    const kind = parts[1]
+                    const b64 = parts.length > 2 ? parts.slice(2).join("|") : ""
                     names.push(name)
+                    kinds[name] = kind
+
+                    const meta = { iconPath: "", author: qsTr("Unknown"), describe: "", minWidth: 128, minHeight: 128 }
+                    try {
+                        const raw = root._fromBase64(b64)
+                        const obj = raw ? JSON.parse(raw) : null
+                        if (obj) {
+                            if (obj.IconPath) meta.iconPath = "file://" + base + "/" + name + "/" + obj.IconPath
+                            meta.author = obj.Author || meta.author
+                            meta.describe = obj.describe || ""
+                            meta.minWidth = parseInt(obj.minWidth, 10) || 128
+                            meta.minHeight = parseInt(obj.minHeight, 10) || 128
+                        }
+                    } catch (e) { /* keep defaults */ }
+                    details[name] = meta
                 }
+                root._themeDetails = details
                 root._themeKinds = kinds
                 root.themeList = names
             }
         }
     }
 
-    function themePath(name: string) {
+    function themePath(name: string): string {
         if (!name || name.indexOf("/") !== -1 || name.indexOf("\\") !== -1)
             return ""
         return `${root.userThemesDir()}/${name}`
@@ -109,29 +142,34 @@ QtObject {
 
     // true when the theme was uploaded by the user (a real folder); false for
     // symlinked built-in themes.
-    function isUserTheme(name: string) {
+    function isUserTheme(name: string): bool {
         return root._themeKinds[name] === "user"
     }
 
-    function getThemeDetails(name: string) {
-        const details = { iconPath: "", author: qsTr("Unknown"), describe: "", minWidth: 128, minHeight: 128 }
-        const path = root.themePath(name)
-        if (!path) return details
-        try {
-            const xhr = new XMLHttpRequest()
-            xhr.open("GET", "file://" + path + "/CursorData.json", false)
-            xhr.send()
-            if (xhr.status !== 200 && xhr.status !== 0) return details
-            const obj = JSON.parse(xhr.responseText)
-            if (obj.IconPath) details.iconPath = "file://" + path + "/" + obj.IconPath
-            details.author = obj.Author || details.author
-            details.describe = obj.describe || ""
-            details.minWidth = parseInt(obj.minWidth, 10) || 128
-            details.minHeight = parseInt(obj.minHeight, 10) || 128
-        } catch (e) {
-            console.warn("Failed to read theme data:", name, e)
+    function _fromBase64(b64) {
+        // Minimal base64 -> byte string decoder (CursorData.json is ASCII in
+        // practice). Avoids the QML XMLHttpRequest file:// restriction.
+        if (!b64) return ""
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+        let out = ""
+        let buffer = 0
+        let bits = 0
+        for (let i = 0; i < b64.length; i++) {
+            if (b64[i] === "=") break
+            const val = chars.indexOf(b64[i])
+            if (val < 0) continue
+            buffer = (buffer << 6) | val
+            bits += 6
+            if (bits >= 8) {
+                bits -= 8
+                out += String.fromCharCode((buffer >> bits) & 0xFF)
+            }
         }
-        return details
+        return out
+    }
+
+    function getThemeDetails(name: string): var {
+        return root._themeDetails[name] || { iconPath: "", author: qsTr("Unknown"), describe: "", minWidth: 128, minHeight: 128 }
     }
 
     function openThemeFolder(name: string) {
@@ -180,10 +218,16 @@ QtObject {
         }
         onExited: code => {
             if (code === 0) {
-                root.refreshThemes()
+                // Apply the uploaded theme first (so the refreshed list shows it
+                // as active), then rebuild the list and reload the effect once.
                 root.setTheme(uploadProc._themeName)
-                root.statusMessage = qsTr("Theme uploaded successfully")
+                root.refreshThemes()
+                root._requestReload()
+                root.statusMessage = qsTr("Theme uploaded and applied")
                 root.themeUploadFinished(true, "")
+                if (root.config && root.config.installGlobal) {
+                    root._installGlobalTheme(uploadProc._themeName)
+                }
             } else {
                 root.statusMessage = (uploadStderr.text || "").trim() || qsTr("Theme upload failed")
                 root.themeUploadFinished(false, root.statusMessage)
@@ -191,6 +235,41 @@ QtObject {
         }
     }
 
+    // Optional second copy of an uploaded theme into the system theme dir.
+    // Uses pkexec (polkit) so the password prompt is shown by the desktop, not
+    // by this plugin.
+    function _installGlobalTheme(themeName: string) {
+        const src = `${root.userThemesDir()}/${themeName}`
+        const script =
+            'dir="$1"; name="$2"; src="$3"; ' +
+            'mkdir -p -- "$dir" || exit 1; ' +
+            'if [ -e "$dir/$name" ]; then echo "already-exists" >&2; exit 2; fi; ' +
+            'cp -r -- "$src"/. "$dir/$name" 2>/dev/null || { echo "copy-failed" >&2; exit 3; }'
+        sysInstallProc._themeName = themeName
+        // Hide the overlay so the polkit password dialog is reachable.
+        root._hideWindow()
+        sysInstallProc.command = ["pkexec", "sh", "-c", script, "--", root.systemThemesDir, themeName, src]
+        sysInstallProc.running = true
+    }
+
+    property Process sysInstallProc: Process {
+        id: sysInstallProc
+        property string _themeName: ""
+        stderr: StdioCollector {
+            id: sysInstallStderr
+        }
+        onExited: code => {
+            const reason = (sysInstallStderr.text || "").trim()
+            if (code === 0) {
+                root.statusMessage = qsTr("Theme uploaded and installed system-wide")
+            } else if (reason.indexOf("already-exists") !== -1) {
+                root.statusMessage = qsTr("Theme uploaded; system copy skipped (already exists)")
+            } else {
+                root.statusMessage = qsTr("Theme uploaded; system copy %1").arg(
+                    reason.length > 0 ? qsTr("failed") : qsTr("cancelled"))
+            }
+        }
+    }
     function removeTheme(themeName: string) {
         if (!themeName) {
             root.themeRemoveFinished(false, qsTr("Empty theme name"))
@@ -215,17 +294,73 @@ QtObject {
         }
         onExited: code => {
             if (code === 0) {
-                if (root.config && root.config.selectTheme === removeProc._themeName)
+                if (root.config && root.config.selectTheme === removeProc._themeName) {
                     root.config.selectTheme = ""
+                    root._requestReload()
+                }
                 root.refreshThemes()
                 root.statusMessage = qsTr("Theme removed successfully")
                 root.themeRemoveFinished(true, "")
+                // A theme installed system-wide needs root to be deleted; only
+                // prompt when a copy actually exists there.
+                root._maybeRemoveGlobalCopy(removeProc._themeName)
             } else if (code === 3) {
                 root.statusMessage = qsTr("Built-in themes cannot be removed")
                 root.themeRemoveFinished(false, root.statusMessage)
             } else {
                 root.statusMessage = qsTr("Theme not found")
                 root.themeRemoveFinished(false, root.statusMessage)
+            }
+        }
+    }
+
+    // If a system-wide copy of the removed theme exists, delete it too. This
+    // needs root, so it goes through pkexec; we only prompt when the copy is
+    // actually present (checked as the unprivileged user first).
+    function _maybeRemoveGlobalCopy(themeName: string) {
+        globalCheckProc._themeName = themeName
+        globalCheckProc.command = ["sh", "-c",
+            '[ -e "$1/$2" ] && echo yes || true', "--", root.systemThemesDir, themeName]
+        globalCheckProc.running = true
+    }
+
+    property Process globalCheckProc: Process {
+        id: globalCheckProc
+        property string _themeName: ""
+        stdout: StdioCollector {
+            id: globalCheckOut
+            onStreamFinished: {
+                if ((globalCheckOut.text || "").trim() === "yes") {
+                    root._removeGlobalCopy(globalCheckProc._themeName)
+                }
+            }
+        }
+    }
+
+    function _removeGlobalCopy(themeName: string) {
+        const script =
+            'dir="$1"; name="$2"; ' +
+            '[ -e "$dir/$name" ] || exit 0; ' +
+            'rm -rf -- "$dir/$name"'
+        globalRemoveProc._themeName = themeName
+        // Hide the overlay so the polkit password dialog is reachable.
+        root._hideWindow()
+        globalRemoveProc.command = ["pkexec", "sh", "-c", script, "--", root.systemThemesDir, themeName]
+        globalRemoveProc.running = true
+    }
+
+    property Process globalRemoveProc: Process {
+        id: globalRemoveProc
+        property string _themeName: ""
+        stderr: StdioCollector {
+            id: globalRemoveErr
+        }
+        onExited: code => {
+            if (code === 0) {
+                root.statusMessage = qsTr("Theme removed; system copy also removed")
+            } else {
+                root.statusMessage = qsTr("Theme removed; system copy %1").arg(
+                    (globalRemoveErr.text || "").trim().length > 0 ? qsTr("failed") : qsTr("cancelled"))
             }
         }
     }
@@ -238,6 +373,7 @@ QtObject {
 
     function useTheme(themeName: string) {
         root.setTheme(themeName)
+        root._requestReload()
         root.statusMessage = qsTr("Theme applied successfully")
     }
 
@@ -265,7 +401,8 @@ QtObject {
             'busctl --user call org.kde.KWin /UltralightCursor org.kde.kwin.KWin.KwinCursorEffect disable 2>/dev/null; ' +
             'true']
         kwinToggleProc.running = true
-        root.save()
+        // No reloadHtml needed while the effect is off; just persist the state.
+        root.config.saveNow()
         root.statusMessage = qsTr("Disabled")
     }
 
@@ -287,10 +424,30 @@ QtObject {
     // Only reloadHtml: /KWin reconfigure makes KWin re-read kwinrc and
     // unload/reload effect plugins, which destroys and re-creates the
     // Ultralight renderer and crashes KWin.
-    function save() {
+    //
+    // reloadHtml is debounced: rapid changes (stepper drags, toggling, theme
+    // switching) collapse into a single D-Bus call, and the config file is
+    // flushed first so the effect reads the final values.
+    function _requestReload() {
         if (!root.config) return
         root.config.saveNow()
+        reloadTimer.restart()
+    }
+
+    function _fireReload() {
         reconfigureProc.running = true
+    }
+
+    property Timer reloadTimer: Timer {
+        id: reloadTimer
+        interval: 400
+        repeat: false
+        onTriggered: root._fireReload()
+    }
+
+    function save() {
+        if (!root.config) return
+        root._requestReload()
         root.statusMessage = qsTr("Saved")
     }
 

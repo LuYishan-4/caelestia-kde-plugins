@@ -56,6 +56,10 @@ QtObject {
     // cmake when its artifacts are missing from the plugin folder.
     property bool autoBuild: true
 
+    // Uploads: additionally copy uploaded themes to /usr/share/caelestia/webcursor
+    // through pkexec (asks for the system password via polkit).
+    property bool installGlobal: false
+
     property bool _loading: true
     property var _data: ({})
 
@@ -64,6 +68,9 @@ QtObject {
             shortcut: "Meta+Shift+C",
             build: {
                 auto: true
+            },
+            upload: {
+                installGlobal: false
             },
             cursor: {
                 enabled: true,
@@ -102,7 +109,7 @@ QtObject {
         var cur = data.webCursor
         var def = defaultConfig.webCursor
         for (var key in def) {
-            if (key === "cursor" || key === "build") continue
+            if (key === "cursor" || key === "build" || key === "upload") continue
             if (cur[key] === undefined) { cur[key] = def[key]; changed = true }
         }
         if (typeof cur.build !== "object" || cur.build === null) {
@@ -110,6 +117,11 @@ QtObject {
             changed = true
         }
         if (cur.build.auto === undefined) { cur.build.auto = true; changed = true }
+        if (typeof cur.upload !== "object" || cur.upload === null) {
+            cur.upload = {}
+            changed = true
+        }
+        if (cur.upload.installGlobal === undefined) { cur.upload.installGlobal = false; changed = true }
         if (typeof cur.cursor !== "object" || cur.cursor === null) {
             cur.cursor = {}
             changed = true
@@ -142,6 +154,7 @@ QtObject {
         config.themesDir = cursor.themesDir || config.themesDirDefault
         config.shortcut = parsed.webCursor.shortcut || "Meta+Shift+C"
         config.autoBuild = !parsed.webCursor.build || parsed.webCursor.build.auto !== false
+        config.installGlobal = !parsed.webCursor.upload || parsed.webCursor.upload.installGlobal === true
         _loading = false
     }
 
@@ -207,6 +220,7 @@ QtObject {
         config.themesDir = data.webCursor.cursor.themesDir
         config.shortcut = data.webCursor.shortcut
         config.autoBuild = !data.webCursor.build || data.webCursor.build.auto !== false
+        config.installGlobal = !data.webCursor.upload || data.webCursor.upload.installGlobal === true
         _loading = false
         _writer.setText(JSON.stringify(data, null, 2) + "\n")
     }
@@ -235,6 +249,7 @@ QtObject {
     onThemesDirChanged: saveKey("webCursor.cursor.themesDir", config.themesDir)
     onShortcutChanged: saveKey("webCursor.shortcut", config.shortcut)
     onAutoBuildChanged: saveKey("webCursor.build.auto", config.autoBuild)
+    onInstallGlobalChanged: saveKey("webCursor.upload.installGlobal", config.installGlobal)
     onBlacklistChanged: saveKey("webCursor.cursor.blacklist", config.blacklist)
 
     Component.onCompleted: {

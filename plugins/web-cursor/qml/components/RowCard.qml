@@ -1,9 +1,14 @@
 // Rounded surface container for a single setting row / group (the visual
 // counterpart of the shell's "ConnectedRect").
 //
-// Put exactly one child inside; it is inset by `padding` and the card sizes
-// itself from the child's implicit height so the surrounding ColumnLayout can
-// lay out without explicit heights.
+// Put exactly one child inside; it is inset by `padding`. The surrounding
+// layout sizes this card, so set the card's `implicitHeight` from the child's
+// own implicit height when you use it inside a ColumnLayout, e.g.:
+//
+//     RowCard {
+//         RowLayout { id: row }
+//         implicitHeight: row.implicitHeight + padding * 2
+//     }
 import QtQuick
 import ".."
 
@@ -15,8 +20,6 @@ Rectangle {
 
     readonly property int padding: Style.paddingLarge
 
-    implicitHeight: (contentItem.data.length > 0
-        ? contentItem.data[0].implicitHeight : 0) + padding * 2
     radius: Style.radiusXLarge
     color: colors ? colors.surface : "#00000000"
     border.color: colors ? colors.outline : "transparent"
