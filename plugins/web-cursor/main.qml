@@ -84,8 +84,8 @@ Scope {
                 root._setBuildStatus("")
                 console.info("[web-cursor] effect already built")
             } else if (code === 0 && output === "built") {
-                root._setBuildStatus(qsTr("Cursor effect built successfully"))
-                console.info("[web-cursor] effect built; install it with 'sudo cmake --install build'")
+                // Fresh build: install it into KWin/system paths (needs root).
+                root._installEffect()
             } else {
                 let reason = err
                 if (!reason) {
@@ -97,6 +97,43 @@ Scope {
                 }
                 root._setBuildStatus(qsTr("Cursor effect build failed: %1").arg(reason))
                 console.error("[web-cursor] build failed:", reason)
+            }
+        }
+    }
+
+    // ---- system install after a fresh build --------------------------------
+    // `cmake --install` writes into system dirs, so it goes through pkexec.
+    property bool installingEffect: false
+
+    function _installEffect() {
+        if (root.installingEffect) return
+        root.installingEffect = true
+        root.showing = false
+        root._setBuildStatus(qsTr("Installing the cursor effect…"))
+        console.info("[web-cursor] installing effect with pkexec")
+        installProc.command = ["pkexec", "cmake", "--install", root._pluginDir + "build"]
+        installProc.running = true
+    }
+
+    property Process installProc: Process {
+        id: installProc
+        command: []
+        stdout: StdioCollector {
+            id: installStdout
+        }
+        stderr: StdioCollector {
+            id: installStderr
+        }
+        onExited: code => {
+            root.installingEffect = false
+            const err = (installStderr.text || "").trim()
+            if (code === 0) {
+                root._setBuildStatus(qsTr("Cursor effect installed successfully"))
+                console.info("[web-cursor] effect installed; reconfigure KWin to load it")
+            } else {
+                root._setBuildStatus(qsTr("Cursor effect install %1: %2").arg(
+                    err.length > 0 ? qsTr("failed") : qsTr("cancelled"), err))
+                console.error("[web-cursor] install failed:", err)
             }
         }
     }
