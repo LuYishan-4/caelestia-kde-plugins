@@ -15,7 +15,6 @@ Scope {
     property var config: WebCursorConfig {}
     property var manager: WebCursorManager {
         config: root.config
-        // Let the manager drop the fullscreen overlay before any pkexec prompt.
         windowHider: () => { root.showing = false }
     }
 
@@ -23,7 +22,6 @@ Scope {
     property bool buildingEffect: false
     property string buildStatusMessage: ""
 
-    // ---- effect bootstrap (contents/ cmake) -------------------------------
     readonly property string _pluginDir: _localPath(Qt.resolvedUrl("."))
 
     function _localPath(url): string {
@@ -169,10 +167,6 @@ Scope {
         onTriggered: root.bootstrapEffect()
     }
 
-    // ---- settings overlay --------------------------------------------------
-    // The PanelWindow is created when the settings open and destroyed when they
-    // close. There is no persistent layer surface and no map/unmap of a live
-    // window, which removes the render-thread crash class seen before.
     Loader {
         id: settingsLoader
         active: root.showing
