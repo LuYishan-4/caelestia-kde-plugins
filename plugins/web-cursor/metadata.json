@@ -2,7 +2,7 @@
   "id": "web-cursor",
   "name": "Ultralight Web Cursor",
   "description": "KWin effect that replaces the system cursor with an animated HTML/CSS/JS cursor rendered by Ultralight.",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "type": "kwineffect",
   "author": {
     "name": "LuYishan-4",
