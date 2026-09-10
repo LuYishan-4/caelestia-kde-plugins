@@ -41,7 +41,7 @@ Open a pull request that deletes the plugin folder. Removal is irreversible and 
 
 ## Choosing a type
 
-- `quickshell` - QML widgets  by the shell.
+- `quickshell` - QML widgets loaded by the shell.
 - `kwineffect` - KDE KWin effects (standard KPackage layout).
 - `theme` - colors / QML styling packs.
 
