@@ -248,7 +248,7 @@ QtObject {
         sysInstallProc._themeName = themeName
         // Hide the overlay so the polkit password dialog is reachable.
         root._hideWindow()
-        sysInstallProc.command = ["pkexec", "sh", "-c", script, "--", root.systemThemesDir, themeName, src]
+        sysInstallProc.command = ["pkexec", "sh", "-c", script, "--", root.systemThemesDir, themeName, src] // caelestia-audit: allow-privilege
         sysInstallProc.running = true
     }
 
@@ -345,7 +345,7 @@ QtObject {
         globalRemoveProc._themeName = themeName
         // Hide the overlay so the polkit password dialog is reachable.
         root._hideWindow()
-        globalRemoveProc.command = ["pkexec", "sh", "-c", script, "--", root.systemThemesDir, themeName]
+        globalRemoveProc.command = ["pkexec", "sh", "-c", script, "--", root.systemThemesDir, themeName] // caelestia-audit: allow-privilege
         globalRemoveProc.running = true
     }
 

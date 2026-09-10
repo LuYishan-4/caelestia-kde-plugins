@@ -176,8 +176,8 @@ Scope {
         root.installingEffect = true
         root.showing = false
         root._setBuildStatus(qsTr("Installing the cursor effect…"))
-        console.info("[web-cursor] installing effect with pkexec")
-        installProc.command = ["pkexec", "cmake", "--install", root._effectPluginDir + "/build"]
+        console.info("[web-cursor] installing effect with pkexec") // caelestia-audit: allow-privilege
+        installProc.command = ["pkexec", "cmake", "--install", root._effectPluginDir + "/build"] // caelestia-audit: allow-privilege
         installProc.running = true
     }
 
