@@ -36,6 +36,7 @@ Validated against [`schemas/plugin.schema.json`](../schemas/plugin.schema.json) 
 | `restart` | no | boolean | `true` = restart the shell automatically after installation finishes. Only set this when the plugin genuinely requires a shell restart. |
 | `dependencies` | no | array of string | Ids of other plugins. |
 | `kwineffect` | no | object | `{ "kpluginId": "…" }` - required for `type: "kwineffect"`. |
+| `ui` | no | string | Path to a Quickshell UI entry point inside the plugin folder (usually `main.qml`). Set it when a plugin whose `type` is not `quickshell` still ships a Quickshell front-end, e.g. a `kwineffect` with a settings UI. |
 | `deprecated` | no | boolean | `true` = keep serving existing installs, stop recommending. |
 | `replacement` | no | string | Plugin id replacing this one (used with `deprecated`). |
 
@@ -86,8 +87,10 @@ then read `plugins/<id>/metadata.json` from the tree. To refresh, `git fetch` an
 ## Type-specific loading
 
 - `quickshell` - the folder contains QML source (at least one `.qml` file). The shell loads the QML into its Quickshell root.
-- `kwineffect` - the folder is a KWin effect in standard KPackage layout with `metadata.desktop`. The shell installs the package (e.g. `kpackagetool6 -t KWin/Effect -i <folder>`) or loads it via KWin's plugin mechanism. `kwineffect.kpluginId` is the KWin plugin id to enable.
+- `kwineffect` - the folder is a KWin effect in standard KPackage layout with `metadata.desktop`. The shell installs the package (e.g. `kpackagetool6 -t KWin/Effect -i <folder>`) or loads it via KWin's plugin mechanism. `kwineffect.kpluginId` is the KWin plugin id to enable. Effects that must be compiled locally (source-only, SDK not bundled) instead ship a Quickshell front-end through `ui`; that UI drives the build and the privileged install.
 - `theme` - the folder contains theme source (colors / QML styling). The shell loads it via its theming system.
+
+Regardless of type, if the manifest sets `ui` (and for `quickshell` plugins, if the folder has a `main.qml`), consumers load that QML into their Quickshell root as the plugin's user interface.
 
 ## Lifecycle semantics
 

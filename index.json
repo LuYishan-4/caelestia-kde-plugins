@@ -1,7 +1,7 @@
 {
   "format": "caelestia-plugin-index",
   "version": 1,
-  "generated": "2026-09-10T15:19:51Z",
+  "generated": "2026-09-10T17:05:04Z",
   "plugins": [
     {
       "id": "shimeji-cat",
@@ -55,8 +55,8 @@
       "id": "web-cursor",
       "path": "plugins/web-cursor",
       "name": "Ultralight Web Cursor",
-      "description": "KWin effect that replaces the system cursor with an animated HTML/CSS/JS cursor rendered by Ultralight.",
-      "version": "1.0.0",
+      "description": "KWin effect that replaces the system cursor with an animated HTML/CSS/JS cursor rendered by Ultralight. Press Meta+Shift+C to open its settings.",
+      "version": "1.1.0",
       "type": "kwineffect",
       "author": {
         "name": "LuYishan-4",
@@ -77,33 +77,8 @@
       "restart": true,
       "kwineffect": {
         "kpluginId": "ultralightwebcursor"
-      }
-    },
-    {
-      "id": "web-cursor-settings",
-      "path": "plugins/web-cursor-settings",
-      "name": "Ultralight Web Cursor Settings",
-      "description": "Press Meta+Shift+C to manage the Ultralight Web Cursor KWin effect.",
-      "version": "1.0.0",
-      "type": "quickshell",
-      "author": {
-        "name": "LuYishan-4",
-        "url": "https://github.com/LuYishan-4"
       },
-      "license": "GPL-3.0-or-later",
-      "icon": "settings",
-      "keywords": [
-        "cursor",
-        "kwin",
-        "effect",
-        "ultralight",
-        "settings"
-      ],
-      "repository": "https://github.com/LuYishan-4/Animated_UltralightWeb_Cursor",
-      "dependencies": [
-        "web-cursor"
-      ],
-      "restart": true
+      "ui": "main.qml"
     }
   ]
 }

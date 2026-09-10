@@ -134,6 +134,11 @@
         }
       }
     },
+    "ui": {
+      "type": "string",
+      "description": "Optional Quickshell UI entry point, relative to the plugin folder (e.g. main.qml). Use it when a plugin whose type is not 'quickshell' (a kwineffect with a settings UI) still ships a Quickshell front-end; the shell loads it the same way it loads a quickshell plugin's main.qml.",
+      "minLength": 1
+    },
     "deprecated": {
       "type": "boolean",
       "description": "true = keep serving to existing installs but stop recommending for new installs.",

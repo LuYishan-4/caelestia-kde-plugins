@@ -23,12 +23,26 @@ Scope {
     property bool sdkReady: false
     property bool sdkMissing: false
     property bool artifactReady: false
+    property bool effectInstalled: false
+    property string artifactFingerprint: ""
     property string buildStatusMessage: ""
     property var shortcutHandle: null
 
+    // Guards for the one-shot bootstrap build/install; the periodic checks
+    // below must not rerun them every time they fire.
+    property bool _artifactChecked: false
+    property bool _autoBuildTried: false
+    property bool _autoInstallTried: false
+
     readonly property string _pluginDir: _localPath(Qt.resolvedUrl("."))
-    // The store installs the settings UI next to its KWin effect dependency.
-    readonly property string _effectPluginDir: _pluginDir + "/../web-cursor"
+    // The settings UI ships in the same folder as the KWin effect, so the
+    // CMake project and its ThirdParty/ SDK live right next to this file.
+    readonly property string _effectPluginDir: _pluginDir
+
+    // Remembers the built artifact that was last installed into the system, so
+    // the automatic install runs once per build instead of on every start.
+    readonly property string _installMarker: (Quickshell.env("XDG_CACHE_HOME")
+        || (Quickshell.env("HOME") + "/.cache")) + "/caelestia/webcursor/installed-fingerprint"
 
     function _localPath(url): string {
         const s = String(url || "").replace(/^file:\/\//, "")
@@ -68,14 +82,21 @@ Scope {
                 root._setBuildStatus(ready
                     ? qsTr("Ultralight SDK found in ThirdParty. Ready to build.")
                     : qsTr("Ultralight SDK is not installed in ThirdParty."))
+            root._maybeAutoBuild()
         }
     }
 
     function checkBuildArtifact() {
         if (artifactCheckProc.running) return
+        // Echoes three lines: ready/missing, the artifact hash, and whether that
+        // exact artifact is the one already installed into the system.
         artifactCheckProc.command = ["sh", "-c",
-            'find "$1/build" -type f -name ultralightwebcursor.so -size +0c -print -quit 2>/dev/null | grep -q . && echo ready || echo missing',
-            "--", root._effectPluginDir]
+            'f=$(find "$1/build" -type f -name ultralightwebcursor.so -size +0c -print -quit 2>/dev/null); ' +
+            '[ -n "$f" ] || { echo missing; exit 0; }; ' +
+            'echo ready; ' +
+            'fp=$(sha256sum "$f" 2>/dev/null | cut -d" " -f1); echo "$fp"; ' +
+            '[ -f "$2" ] && [ "$(cat "$2")" = "$fp" ] && echo installed || echo not-installed',
+            "--", root._effectPluginDir, root._installMarker]
         artifactCheckProc.running = true
     }
 
@@ -84,12 +105,43 @@ Scope {
         command: []
         stdout: StdioCollector { id: artifactCheckStdout }
         onExited: () => {
-            const ready = (artifactCheckStdout.text || "").trim() === "ready"
+            const lines = (artifactCheckStdout.text || "").split("\n")
+            const ready = (lines[0] || "").trim() === "ready"
             const becameReady = ready && !root.artifactReady
             root.artifactReady = ready
+            root.artifactFingerprint = ready ? (lines[1] || "").trim() : ""
+            root.effectInstalled = ready && (lines[2] || "").trim() === "installed"
+            root._artifactChecked = true
             if (becameReady && !root.buildingEffect)
                 root._setBuildStatus(qsTr("Effect library ready: ultralightwebcursor.so"))
+            root._maybeAutoBuild()
+            root._maybeAutoInstall()
         }
+    }
+
+    // Build the effect once, on startup, when the Ultralight SDK is present, the
+    // build output is missing and the user has not opted out of auto-building.
+    // Installing the plugin from the store then gets the effect built for the
+    // automatic system install below.
+    function _maybeAutoBuild() {
+        if (root._autoBuildTried || !root._artifactChecked) return
+        if (root.artifactReady || root.buildingEffect || !root.sdkReady) return
+        if (!root.config.autoBuild) return
+        root._autoBuildTried = true
+        root.buildEffect()
+    }
+
+    // Install the built effect into KWin automatically, once per build. This is
+    // the same privileged `pkexec cmake --install` the panel's Install button
+    // runs; the marker file records which artifact was installed. A build that
+    // changes the artifact (e.g. after a plugin update) installs again.
+    function _maybeAutoInstall() {
+        if (root._autoInstallTried || !root._artifactChecked) return
+        if (!root.artifactReady || root.effectInstalled) return
+        if (root.buildingEffect || root.installingEffect) return
+        if (!root.config.autoInstall) return
+        root._autoInstallTried = true
+        root._installEffect()
     }
 
     function buildEffect() {
@@ -196,11 +248,36 @@ Scope {
             if (code === 0) {
                 root._setBuildStatus(qsTr("Cursor effect installed successfully"))
                 console.info("[web-cursor] effect installed; reconfigure KWin to load it")
+                markInstalledProc.command = ["sh", "-c",
+                    'mkdir -p "$(dirname "$1")" && printf "%s" "$2" > "$1"',
+                    "--", root._installMarker, root.artifactFingerprint]
+                markInstalledProc.running = true
             } else {
-                root._setBuildStatus(qsTr("Cursor effect install %1: %2").arg(
-                    err.length > 0 ? qsTr("failed") : qsTr("cancelled"), err))
+                // pkexec exit 126 means the polkit dialog was dismissed. Take
+                // that as "do not install automatically" and stop asking; the
+                // panel's Install button remains available.
+                const dismissed = code === 126
+                if (dismissed && root.config.autoInstall)
+                    root.config.autoInstall = false
+                if (dismissed)
+                    root._setBuildStatus(qsTr("Cursor effect install dismissed; automatic install disabled. Use Install to retry."))
+                else
+                    root._setBuildStatus(qsTr("Cursor effect install %1: %2").arg(
+                        err.length > 0 ? qsTr("failed") : qsTr("cancelled"), err))
                 console.error("[web-cursor] install failed:", err)
             }
+        }
+    }
+
+    // Records the artifact that is now live in the system, so the next start
+    // does not offer to install it again, and brings the effect up in KWin.
+    property Process markInstalledProc: Process {
+        id: markInstalledProc
+        command: []
+        onExited: () => {
+            root.checkBuildArtifact()
+            if (root.config.enabled)
+                root.manager.enable()
         }
     }
 

@@ -20,6 +20,8 @@ plugin folder:
     * ``theme``       - at least one theme source file,
 * ``kwineffect`` metadata is coherent with the declared type (only allowed
   on ``kwineffect`` plugins, and its ``kpluginId`` matches the KWin package),
+* a declared ``ui`` entry point (an optional Quickshell front-end for a plugin
+  whose type is not ``quickshell``) exists inside the folder,
 * the description does not advertise a shortcut the plugin never registers.
 
 It also checks the store as a whole (unique ids, dependency references).
@@ -301,6 +303,16 @@ def validate_plugin(plugin_dir, schema, warnings):
     for value in meta.get("screenshots", []) or []:
         check_asset_dir(plugin_id, "screenshots", value, warnings)
         problems.extend(check_referenced_file(plugin_dir, plugin_id, "screenshots", value))
+
+    ui = meta.get("ui")
+    if ui is not None:
+        if not isinstance(ui, str) or not ui.strip():
+            problems.append(
+                f"plugin '{plugin_id}': 'ui' must be a non-empty path relative "
+                "to the plugin folder"
+            )
+        else:
+            problems.extend(check_referenced_file(plugin_dir, plugin_id, "ui", ui))
 
     for rel in find_forbidden_files(plugin_dir):
         problems.append(

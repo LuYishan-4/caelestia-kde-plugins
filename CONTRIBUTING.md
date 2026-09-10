@@ -18,7 +18,7 @@ Thanks for contributing! This store is the official community appstore for the C
 4. Add a `LICENSE` file for your plugin (see [Licensing](#licensing)).
 5. Add your plugin content. Type-specific requirements:
    - `quickshell` - at least one `.qml` file.
-   - `kwineffect` - a KPackage layout with `metadata.desktop`, plus `kwineffect.kpluginId` in the manifest.
+   - `kwineffect` - a KPackage layout with `metadata.desktop`, plus `kwineffect.kpluginId` in the manifest. If the effect must be compiled on the user's machine, also add a Quickshell front-end and point `ui` at its entry file (e.g. `"ui": "main.qml"`) so the shell can load it.
    - `theme` - theme source files.
 6. Test locally (requires Python and `jsonschema`):
    ```
@@ -61,7 +61,7 @@ To request a new type, open an issue; the maintainers extend the schema and the 
 ## Validation and CI
 
 - `.github/workflows/validate.yml` runs on every pull request and push to `main`:
-  - `scripts/validate.py` - validates every plugin's folder, manifest, and metadata coherence. In addition to the manifest schema it enforces: `kwineffect` metadata is only allowed on `type: kwineffect` plugins, a KWin `metadata.desktop` must not ship under another type, `kwineffect.kpluginId` matches the KWin package's `X-KDE-PluginInfo-Name`, and the description must not advertise a shortcut the plugin never registers.
+  - `scripts/validate.py` - validates every plugin's folder, manifest, and metadata coherence. In addition to the manifest schema it enforces: `kwineffect` metadata is only allowed on `type: kwineffect` plugins, a KWin `metadata.desktop` must not ship under another type, `kwineffect.kpluginId` matches the KWin package's `X-KDE-PluginInfo-Name`, a declared `ui` entry point exists inside the plugin folder, and the description must not advertise a shortcut the plugin never registers.
   - `scripts/check_safety.py` - scans plugin source for external downloads / network fetches, privilege escalation (`pkexec`/`sudo`/`doas`), and shell-outs, plus low-severity naming warnings. Download and privilege findings are hard errors unless the line carries an opt-out comment (see below).
   - `scripts/check_scope.py` - fails a PR that touches anything outside `plugins/` (root files, docs, scripts, workflows, and `index.json` belong in their own PRs).
 - `.github/workflows/build-index.yml` regenerates `index.json` after every merge to `main`, so you never need to edit it by hand.
