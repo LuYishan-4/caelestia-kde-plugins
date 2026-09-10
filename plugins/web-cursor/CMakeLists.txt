@@ -13,7 +13,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(EPOXY REQUIRED IMPORTED_TARGET epoxy)
 
-set(ULTRALIGHT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty")
+set(ULTRALIGHT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty"
+    CACHE PATH "Path to an extracted Ultralight SDK")
 
 if(NOT EXISTS "${ULTRALIGHT_ROOT}/include/AppCore/App.h" OR
    NOT EXISTS "${ULTRALIGHT_ROOT}/bin/libUltralightCore.so")

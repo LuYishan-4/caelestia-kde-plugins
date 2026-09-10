@@ -51,10 +51,11 @@ The effect can be built in two ways:
 When `main.qml` starts it checks whether the bundled C++ project was already
 built (`<plugin dir>/build` with a compiled `ultralightwebcursor.so`). If not,
 it runs `cmake -S . -B build` and `cmake --build build` in the background.
-Install the Ultralight SDK yourself and configure CMake with
-`-DULTRALIGHT_ROOT=/path/to/ultralight-sdk` before using this option. Build
-progress/errors are shown at the top of the settings panel. This only *builds*;
-to make KWin load the effect you still need to install it once:
+Install the Ultralight SDK yourself before using this option. By default CMake
+expects it in `ThirdParty/`; if it is stored elsewhere, configure the build
+with `-DULTRALIGHT_ROOT=/path/to/ultralight-sdk`. Build progress/errors are
+shown at the top of the settings panel. This only *builds*; to make KWin load
+the effect you still need to install it once:
 
 ```sh
 sudo cmake --install build
@@ -67,6 +68,11 @@ cmake -B build -S .
 cmake --build build
 sudo cmake --install build
 ```
+
+This effect is a build-required KWin plugin rather than a prebuilt KPackage.
+The store's source-only installer must not pass it directly to
+`kpackagetool6`; use the companion settings plugin or the CMake commands above
+to build and install the compiled effect.
 
 `cmake --install` copies:
 

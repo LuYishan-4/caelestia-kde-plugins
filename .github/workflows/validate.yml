@@ -34,8 +34,4 @@ jobs:
 
       - name: Check PR scope
         if: github.event_name == 'pull_request'
-        run: >-
-          python scripts/check_scope.py
-          --base "$(git rev-parse HEAD^1)"
-          --allow .github/workflows/validate.yml
-          --allow scripts/check_scope.py
+        run: python scripts/check_scope.py --base "${{ github.event.pull_request.base.sha }}"
