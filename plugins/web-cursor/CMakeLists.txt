@@ -13,65 +13,15 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(EPOXY REQUIRED IMPORTED_TARGET epoxy)
 
-set(ULTRALIGHT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty"
-    CACHE PATH "Path to an extracted Ultralight SDK")
-set(ULTRALIGHT_REPO "LuYishan-4/ThirdParty"
-    CACHE STRING "GitHub repository mirroring the Ultralight SDK used for the automatic download")
-set(ULTRALIGHT_REF "main"
-    CACHE STRING "Branch/tag/commit of ULTRALIGHT_REPO fetched when no local copy is found")
-set(ULTRALIGHT_DOWNLOAD_URL ""
-    CACHE STRING "Override the automatic Ultralight SDK download URL (full tarball URL, e.g. your own mirror)")
-option(ULTRALIGHT_DOWNLOAD "Automatically download the Ultralight SDK when no local copy is found" ON)
+set(ULTRALIGHT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty")
 
-if(NOT EXISTS "${ULTRALIGHT_ROOT}/include/AppCore/App.h")
-    if(NOT ULTRALIGHT_DOWNLOAD)
-        message(FATAL_ERROR
-            "Ultralight SDK not found at ${ULTRALIGHT_ROOT}. "
-            "Download/extract it there manually, point -DULTRALIGHT_ROOT=<path> at an "
-            "existing SDK, or re-enable ULTRALIGHT_DOWNLOAD to fetch it automatically.")
-    endif()
-
-    if(NOT ULTRALIGHT_DOWNLOAD_URL)
-        set(ULTRALIGHT_DOWNLOAD_URL
-            "https://codeload.github.com/${ULTRALIGHT_REPO}/tar.gz/${ULTRALIGHT_REF}")
-    endif()
-
-    set(_sdk_dir "${CMAKE_BINARY_DIR}/ultralight-sdk")
-    file(MAKE_DIRECTORY "${_sdk_dir}")
-    set(_sdk_archive "${_sdk_dir}/thirdparty.tar.gz")
-    message(STATUS "[web-cursor] Ultralight SDK not found; downloading ${ULTRALIGHT_REPO}@${ULTRALIGHT_REF} ...")
-    file(DOWNLOAD "${ULTRALIGHT_DOWNLOAD_URL}" "${_sdk_archive}"
-        SHOW_PROGRESS TIMEOUT 600 STATUS _dl_status LOG _dl_log)
-    list(GET _dl_status 0 _dl_code)
-    if(NOT _dl_code EQUAL 0)
-        message(FATAL_ERROR
-            "[web-cursor] Failed to download the Ultralight SDK from:\n"
-            "  ${ULTRALIGHT_DOWNLOAD_URL}\n"
-            "${_dl_log}\n"
-            "Install it manually and re-run cmake with -DULTRALIGHT_ROOT=<path> "
-            "or -DULTRALIGHT_DOWNLOAD=OFF.")
-    endif()
-
-    file(ARCHIVE_EXTRACT INPUT "${_sdk_archive}" DESTINATION "${_sdk_dir}")
-
-    # The archive contains a single top-level folder (e.g. ThirdParty-main);
-    # locate it instead of assuming the archive's internal layout.
-    set(_found_root "")
-    file(GLOB _sdk_candidates "${_sdk_dir}/*")
-    foreach(_cand IN LISTS _sdk_candidates)
-        if(EXISTS "${_cand}/include/AppCore/App.h" AND EXISTS "${_cand}/bin/libUltralightCore.so")
-            set(_found_root "${_cand}")
-            break()
-        endif()
-    endforeach()
-    if(NOT _found_root)
-        message(FATAL_ERROR
-            "[web-cursor] Downloaded archive does not look like an Ultralight SDK: ${_sdk_archive}\n"
-            "Point -DULTRALIGHT_ROOT=<path> at an extracted SDK and re-run cmake.")
-    endif()
-
-    set(ULTRALIGHT_ROOT "${_found_root}" CACHE PATH "Path to an extracted Ultralight SDK" FORCE)
-    message(STATUS "[web-cursor] Ultralight SDK ready at ${ULTRALIGHT_ROOT}")
+if(NOT EXISTS "${ULTRALIGHT_ROOT}/include/AppCore/App.h" OR
+   NOT EXISTS "${ULTRALIGHT_ROOT}/bin/libUltralightCore.so")
+    message(FATAL_ERROR
+        "Ultralight SDK was not found at ${ULTRALIGHT_ROOT}.\n"
+        "Install and extract a compatible Ultralight SDK yourself into the ThirdParty directory:\n"
+        "  ./install-sdk.sh /path/to/ultralight-sdk\n"
+        "The SDK directory must contain include/AppCore/App.h and bin/libUltralightCore.so.")
 endif()
 
 set(ULTRALIGHT_BIN "${ULTRALIGHT_ROOT}/bin")

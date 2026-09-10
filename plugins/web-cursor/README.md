@@ -1,26 +1,18 @@
 ># Ultralight Web Cursor
 
 A KWin effect that replaces the system cursor with an animated HTML/CSS/JS
-cursor rendered by [Ultralight](https://ultralig.ht/), plus a Quickshell
-settings UI to manage it. The cursor is a real HTML page, so themes are plain
-folders with an `index.html` (see `contents/WebCursor/`).
+cursor rendered by [Ultralight](https://ultralig.ht/). The cursor is a real
+HTML page, so themes are plain folders with an `index.html` (see
+`contents/WebCursor/`).
 
-The plugin is **source-only** and ships two halves in the same folder:
+The plugin is **source-only** and contains the KWin effect
+(`ultralightwebcursor`), built from C++ with CMake. Install the companion
+`web-cursor-settings` Quickshell plugin for its settings UI and
+`Meta+Shift+C` shortcut. Both plugins share the `webCursor` section in
+`~/.config/caelestia/shell.json`.
 
-| Half | Purpose |
-| --- | --- |
-| `contents/` + `CMakeLists.txt` | The KWin effect (`ultralightwebcursor`), built from C++ with CMake. |
-| `main.qml` + `qml/` | A Quickshell settings UI (Nexus-style page + theme/config service), ported from [`caelestia-dots-kde`](https://github.com/LuYishan-4/caelestia-dots-kde). |
-
-Both halves share one config document: `webCursor` in
-`~/.config/caelestia/shell.json`. The effect reads it from its own process; the
-UI writes it and then pokes the effect over D-Bus.
-
-The store manifest is `type: quickshell`, which is what makes the Caelestia
-shell's plugin loader instantiate `main.qml` and the settings UI (the folder
-keeps the KWin package files — `metadata.desktop` and `kwineffect.kpluginId`
-`ultralightwebcursor` — so the effect can still be built/installed from the
-same source via its CMakeLists).
+The store manifest is `type: kwineffect`, matching the KWin effect package and
+its `kwineffect.kpluginId` (`ultralightwebcursor`).
 
 ## Dependencies
 
@@ -31,24 +23,17 @@ same source via its CMakeLists).
 - `epoxy`
 - The **Ultralight SDK** (https://ultralig.ht/) — *not* bundled on purpose:
   this store is source-only and the `.so` binaries are too large to ship.
-  `CMakeLists.txt` looks for an extracted SDK at `ULTRALIGHT_ROOT` (default
-  `./ThirdParty`, layout `bin/*.so` + `include` + `resources`). If none is
-  found there, it downloads the SDK automatically from the ThirdParty GitHub
-  mirror (<https://github.com/LuYishan-4/ThirdParty>, branch `main` by
-  default) into the build directory.
-
-  Automatic download can be tuned or disabled with cache variables:
+  Install and extract a compatible SDK yourself. Its directory must be named
+  **`ThirdParty`** and live directly inside this plugin folder. The required
+  layout is `ThirdParty/bin/*.so`, `ThirdParty/include`, and
+  `ThirdParty/resources`. Use the provided script to copy an already extracted
+  SDK into that exact location; it never downloads anything:
 
   ```sh
-  cmake -B build -S . \
-    -DULTRALIGHT_REPO=LuYishan-4/ThirdParty \
-    -DULTRALIGHT_REF=main \
-    -DULTRALIGHT_DOWNLOAD_URL="https://..." \
-    -DULTRALIGHT_DOWNLOAD=OFF -DULTRALIGHT_ROOT=/path/to/ultralight-sdk
+  ./install-sdk.sh /path/to/extracted-ultralight-sdk
   ```
 
-  Anything you keep inside this folder (e.g. a copy of the SDK at
-  `ThirdParty/`) is git-ignored and must never be committed.
+  The build never downloads an SDK or accesses the network.
 
 **Running the settings UI** (the shell side):
 
@@ -65,10 +50,11 @@ The effect can be built in two ways:
 
 When `main.qml` starts it checks whether the bundled C++ project was already
 built (`<plugin dir>/build` with a compiled `ultralightwebcursor.so`). If not,
-it runs `cmake -S . -B build` and `cmake --build build` in the background
-(first run also fetches the Ultralight SDK). Build progress/errors are shown
-at the top of the settings panel. This only *builds*; to make KWin load the
-effect you still need to install it once:
+it runs `cmake -S . -B build` and `cmake --build build` in the background.
+Install the Ultralight SDK yourself and configure CMake with
+`-DULTRALIGHT_ROOT=/path/to/ultralight-sdk` before using this option. Build
+progress/errors are shown at the top of the settings panel. This only *builds*;
+to make KWin load the effect you still need to install it once:
 
 ```sh
 sudo cmake --install build
@@ -77,7 +63,7 @@ sudo cmake --install build
 ### 2. Manually, from a checkout
 
 ```sh
-cmake -B build -S .          # fetches the Ultralight SDK automatically if needed
+cmake -B build -S .
 cmake --build build
 sudo cmake --install build
 ```
@@ -89,6 +75,8 @@ sudo cmake --install build
 - the built-in cursor themes and Ultralight resources into `/usr/share/caelestia/webcursor`.
 
 ## Settings UI (Quickshell)
+
+Install the `web-cursor-settings` companion plugin to manage this effect.
 
 The QML half mirrors the web cursor UI/service/config from
 [`caelestia-dots-kde`](https://github.com/LuYishan-4/caelestia-dots-kde):
@@ -169,11 +157,12 @@ busctl --user call org.kde.KWin /UltralightCursor org.kde.kwin.KWin.KwinCursorEf
 
 ## Store layout
 
-- `metadata.json` - Caelestia plugin store manifest (`type: quickshell`; keeps `kwineffect.kpluginId` for the bundled effect).
+- `metadata.json` - Caelestia plugin store manifest (`type: kwineffect`).
 - `metadata.desktop` - KWin effect metadata.
 - `CMakeLists.txt` - effect build script (source-only; `build/` is git-ignored).
+- `install-sdk.sh` - manually copies an already extracted SDK into `ThirdParty/`; it never downloads a file.
 - `contents/` - effect source (KPackage `contents/` layout) and bundled cursor themes.
-- `main.qml` + `qml/` - Quickshell settings UI (`main.qml` is the entry `Scope`).
+- `web-cursor-settings` - companion Quickshell settings plugin.
 
 Validate the store locally with:
 

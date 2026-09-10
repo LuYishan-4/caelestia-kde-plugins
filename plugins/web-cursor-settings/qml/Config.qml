@@ -141,6 +141,11 @@ QtObject {
         }
         _mergeDefaults(parsed)
 
+        // Meta+Alt+W was the original, incorrect documented default. Migrate
+        // that exact legacy value so existing installs use Meta+Shift+C while
+        // preserving every other user-selected shortcut.
+        const migrateLegacyShortcut = parsed.webCursor.shortcut === "Meta+Alt+W"
+
         _loading = true
         config._data = parsed
         var cursor = parsed.webCursor.cursor
@@ -152,10 +157,13 @@ QtObject {
         if (!config._sameArray(incomingBlacklist, config.blacklist))
             config.blacklist = incomingBlacklist
         config.themesDir = cursor.themesDir || config.themesDirDefault
-        config.shortcut = parsed.webCursor.shortcut || "Meta+Shift+C"
+        config.shortcut = migrateLegacyShortcut ? "Meta+Shift+C"
+                                               : (parsed.webCursor.shortcut || "Meta+Shift+C")
         config.autoBuild = !parsed.webCursor.build || parsed.webCursor.build.auto !== false
         config.installGlobal = !parsed.webCursor.upload || parsed.webCursor.upload.installGlobal === true
         _loading = false
+        if (migrateLegacyShortcut)
+            config.saveKey("webCursor.shortcut", config.shortcut)
     }
 
     // ---- persistence -----------------------------------------------------

@@ -18,12 +18,19 @@ Item {
     id: root
 
     signal closeRequested()
+    signal buildRequested()
+    signal installRequested()
 
     property bool showing: false
     property var colors: null
     property var config: null
     property var manager: null
     property string buildStatus: ""
+    property bool sdkMissing: false
+    property bool sdkReady: false
+    property bool artifactReady: false
+    property bool buildingEffect: false
+    property bool installingEffect: false
 
     visible: showing || opacity > 0
     opacity: showing ? 1 : 0
@@ -138,15 +145,84 @@ Item {
                     y: Style.paddingMedium
                     spacing: Style.spacingMedium
 
-                    // Effect bootstrap status (see main.qml bootstrapEffect).
-                    Text {
+                    // ---- Effect build & install --------------------------------
+                    RowCard {
                         Layout.fillWidth: true
-                        visible: root.buildStatus.length > 0
-                        text: root.buildStatus
-                        color: colors ? colors.tertiary : "#8bceff"
-                        font.family: Style.fontFamily
-                        font.pixelSize: Style.fontCaption
-                        wrapMode: Text.WordWrap
+                        colors: root.colors
+
+                        ColumnLayout {
+                            id: effectPanel
+                            anchors.fill: parent
+                            spacing: Style.spacingSmall
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: Style.spacingMedium
+
+                                Text {
+                                    text: qsTr("Effect build & install")
+                                    font.family: Style.fontFamilyHeading
+                                    font.pixelSize: Style.fontBodyLarge
+                                    font.weight: Font.DemiBold
+                                    color: colors ? colors.surfaceText : "#e0e0e0"
+                                }
+
+                                Text {
+                                    text: root.sdkReady ? qsTr("SDK ready") : qsTr("SDK missing")
+                                    font.family: Style.fontFamily
+                                    font.pixelSize: Style.fontTiny
+                                    color: root.sdkReady
+                                        ? (colors ? colors.primary : Style.fallbackAccent)
+                                        : (colors ? colors.error : "#ffb4ab")
+                                }
+
+                                Text {
+                                    text: root.artifactReady ? qsTr("library ready") : qsTr("no library")
+                                    font.family: Style.fontFamily
+                                    font.pixelSize: Style.fontTiny
+                                    color: root.artifactReady
+                                        ? (colors ? colors.primary : Style.fallbackAccent)
+                                        : (colors ? colors.surfaceVariantText : "#b0b0b0")
+                                }
+
+                                Item { Layout.fillWidth: true }
+
+                                Button {
+                                    text: root.buildingEffect ? qsTr("Building…") : qsTr("Build")
+                                    enabled: root.sdkReady && !root.buildingEffect
+                                    onClicked: root.buildRequested()
+                                }
+                                Button {
+                                    text: root.installingEffect ? qsTr("Installing…") : qsTr("Install")
+                                    enabled: root.artifactReady && !root.installingEffect
+                                    onClicked: root.installRequested()
+                                }
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
+                                visible: root.buildStatus.length > 0
+                                text: root.buildStatus
+                                font.family: Style.fontFamily
+                                font.pixelSize: Style.fontCaption
+                                color: colors ? colors.surfaceVariantText : "#b0b0b0"
+                                wrapMode: Text.WordWrap
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
+                                visible: root.sdkMissing
+                                text: qsTr("Put the Ultralight SDK at web-cursor/ThirdParty/ (include/, bin/, resources/) — see <a href=\"https://ultralig.ht/\">ultralig.ht</a>.")
+                                textFormat: Text.RichText
+                                onLinkActivated: link => Qt.openUrlExternally(link)
+                                font.family: Style.fontFamily
+                                font.pixelSize: Style.fontCaption
+                                color: colors ? colors.surfaceVariantText : "#b0b0b0"
+                                linkColor: colors ? colors.primary : Style.fallbackAccent
+                                wrapMode: Text.WordWrap
+                            }
+                        }
+                        implicitHeight: effectPanel.implicitHeight + padding * 2
                     }
 
                     // ---- Enable -------------------------------------------------

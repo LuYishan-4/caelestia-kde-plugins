@@ -20,9 +20,15 @@ Scope {
 
     property bool showing: false
     property bool buildingEffect: false
+    property bool sdkReady: false
+    property bool sdkMissing: false
+    property bool artifactReady: false
     property string buildStatusMessage: ""
+    property var shortcutHandle: null
 
     readonly property string _pluginDir: _localPath(Qt.resolvedUrl("."))
+    // The store installs the settings UI next to its KWin effect dependency.
+    readonly property string _effectPluginDir: _pluginDir + "/../web-cursor"
 
     function _localPath(url): string {
         const s = String(url || "").replace(/^file:\/\//, "")
@@ -35,27 +41,81 @@ Scope {
             root.manager.statusMessage = root.buildStatusMessage
     }
 
+    function checkSdk() {
+        if (!root._effectPluginDir) return
+        if (sdkCheckProc.running) return
+        sdkCheckProc.command = ["sh", "-c",
+            'sdk="$1/ThirdParty"; ' +
+            '[ -f "$sdk/include/AppCore/App.h" ] && ' +
+            '[ -f "$sdk/bin/libUltralightCore.so" ] && ' +
+            '[ -d "$sdk/resources" ] && echo ready || echo missing',
+            "--", root._effectPluginDir]
+        sdkCheckProc.running = true
+    }
 
-    function bootstrapEffect() {
+    property Process sdkCheckProc: Process {
+        id: sdkCheckProc
+        command: []
+        stdout: StdioCollector { id: sdkCheckStdout }
+        onExited: () => {
+            const ready = (sdkCheckStdout.text || "").trim() === "ready"
+            const changed = ready !== root.sdkReady
+            root.sdkReady = ready
+            root.sdkMissing = !ready
+            // Only announce on transitions; the periodic check must not clobber
+            // build/install progress messages.
+            if (changed)
+                root._setBuildStatus(ready
+                    ? qsTr("Ultralight SDK found in ThirdParty. Ready to build.")
+                    : qsTr("Ultralight SDK is not installed in ThirdParty."))
+        }
+    }
+
+    function checkBuildArtifact() {
+        if (artifactCheckProc.running) return
+        artifactCheckProc.command = ["sh", "-c",
+            'find "$1/build" -type f -name ultralightwebcursor.so -size +0c -print -quit 2>/dev/null | grep -q . && echo ready || echo missing',
+            "--", root._effectPluginDir]
+        artifactCheckProc.running = true
+    }
+
+    property Process artifactCheckProc: Process {
+        id: artifactCheckProc
+        command: []
+        stdout: StdioCollector { id: artifactCheckStdout }
+        onExited: () => {
+            const ready = (artifactCheckStdout.text || "").trim() === "ready"
+            const becameReady = ready && !root.artifactReady
+            root.artifactReady = ready
+            if (becameReady && !root.buildingEffect)
+                root._setBuildStatus(qsTr("Effect library ready: ultralightwebcursor.so"))
+        }
+    }
+
+    function buildEffect() {
         if (root.buildingEffect) return
-        if (!root.config || !root.config.autoBuild) return
-        if (!root._pluginDir) return
+        if (!root._effectPluginDir) return
+        if (!root.sdkReady) {
+            root._setBuildStatus(qsTr("Install the Ultralight SDK in the ThirdParty folder before building."))
+            root.checkSdk()
+            return
+        }
 
-        const dir = root._pluginDir
+        const dir = root._effectPluginDir
         const script =
             'dir="$1"; ' +
             'cd "$dir" || { echo "plugin-dir-missing" >&2; exit 2; }; ' +
-            'if [ -f build/CMakeCache.txt ] && [ -f build/.webcursor-built ]; then ' +
+            'if find build -type f -name ultralightwebcursor.so -size +0c -print -quit 2>/dev/null | grep -q .; then ' +
             '  echo "ready"; exit 0; ' +
             'fi; ' +
             'if ! command -v cmake >/dev/null 2>&1; then ' +
             '  echo "cmake-missing" >&2; exit 3; ' +
             'fi; ' +
             'echo "configuring"; ' +
-            'cmake -S . -B build >/dev/null 2>&1 || { echo "configure-failed" >&2; exit 4; }; ' +
+            'cmake -S . -B build || { echo "configure-failed" >&2; exit 4; }; ' +
             'echo "building"; ' +
             'cmake --build build -j 4 >/dev/null 2>&1 || { echo "build-failed" >&2; exit 5; }; ' +
-            'touch build/.webcursor-built; ' +
+            'find build -type f -name ultralightwebcursor.so -size +0c -print -quit 2>/dev/null | grep -q . || { echo "artifact-missing" >&2; exit 6; }; ' +
             'echo "built"'
 
         buildProc.command = ["sh", "-c", script, "--", dir]
@@ -79,13 +139,15 @@ Scope {
             const output = (buildStdout.text || "").trim()
             const err = (buildStderr.text || "").trim()
             if (code === 0 && output === "ready") {
-                root._setBuildStatus("")
-                console.info("[web-cursor] effect already built")
+                root._setBuildStatus(qsTr("Build output is ready."))
+                console.info("[web-cursor] effect build output already exists")
             } else if (code === 0 && output === "built") {
-                // Fresh build: install it into KWin/system paths (needs root).
-                root._installEffect()
+                root._setBuildStatus(qsTr("Build completed; verifying ultralightwebcursor.so…"))
             } else {
+                root.sdkMissing = (output + "\n" + err).indexOf("Ultralight SDK was not found") !== -1
                 let reason = err
+                if (root.sdkMissing)
+                    reason = qsTr("Ultralight SDK is not installed")
                 if (!reason) {
                     if (code === 3) reason = qsTr("cmake is not installed")
                     else if (code === 4) reason = qsTr("cmake configure failed")
@@ -96,6 +158,8 @@ Scope {
                 root._setBuildStatus(qsTr("Cursor effect build failed: %1").arg(reason))
                 console.error("[web-cursor] build failed:", reason)
             }
+            root.checkSdk()
+            root.checkBuildArtifact()
         }
     }
 
@@ -105,11 +169,15 @@ Scope {
 
     function _installEffect() {
         if (root.installingEffect) return
+        if (!root.artifactReady) {
+            root._setBuildStatus(qsTr("Cannot install: ultralightwebcursor.so is not built yet"))
+            return
+        }
         root.installingEffect = true
         root.showing = false
         root._setBuildStatus(qsTr("Installing the cursor effect…"))
         console.info("[web-cursor] installing effect with pkexec")
-        installProc.command = ["pkexec", "cmake", "--install", root._pluginDir + "build"]
+        installProc.command = ["pkexec", "cmake", "--install", root._effectPluginDir + "/build"]
         installProc.running = true
     }
 
@@ -142,8 +210,12 @@ Scope {
             console.warn("[web-cursor] CaelestiaApi.shortcuts unavailable; settings shortcut disabled")
             return
         }
+        if (root.shortcutHandle) {
+            root.shortcutHandle.destroy()
+            root.shortcutHandle = null
+        }
         console.info("[web-cursor] registering shortcut", root.config.shortcut)
-        CaelestiaApi.shortcuts.register("webcursor_settings", "Toggle Web Cursor Settings", root.config.shortcut, () => {
+        root.shortcutHandle = CaelestiaApi.shortcuts.register("webcursor_settings", "Toggle Web Cursor Settings", root.config.shortcut, () => {
             root.showing = !root.showing
             console.info("[web-cursor] shortcut fired, showing =", root.showing)
         })
@@ -155,16 +227,23 @@ Scope {
     }
 
     Component.onCompleted: {
-        bootstrapTimer.start()
         root.manager.ensureInitialized()
         root.registerShortcut()
+        root.checkSdk()
+        root.checkBuildArtifact()
     }
 
+    // Poll the SDK and the build artifact so the panel reflects changes made
+    // outside the UI (files copied in/removed, builds from a terminal).
     Timer {
-        id: bootstrapTimer
-        interval: 400
-        repeat: false
-        onTriggered: root.bootstrapEffect()
+        interval: 2000
+        repeat: true
+        running: true
+        triggeredOnStart: true
+        onTriggered: {
+            root.checkSdk()
+            root.checkBuildArtifact()
+        }
     }
 
     Loader {
@@ -189,6 +268,13 @@ Scope {
                     config: root.config
                     manager: root.manager
                     buildStatus: root.buildStatusMessage
+                    sdkMissing: root.sdkMissing
+                    sdkReady: root.sdkReady
+                    artifactReady: root.artifactReady
+                    buildingEffect: root.buildingEffect
+                    installingEffect: root.installingEffect
+                    onBuildRequested: root.buildEffect()
+                    onInstallRequested: root._installEffect()
                     onCloseRequested: root.showing = false
                 }
             }
