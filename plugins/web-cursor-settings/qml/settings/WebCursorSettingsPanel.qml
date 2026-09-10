@@ -32,6 +32,12 @@ Item {
     property bool buildingEffect: false
     property bool installingEffect: false
 
+    // Header artwork. Drop the actual files at:
+    //   <plugin root>/assets/webcursor-banner.png  (wide banner, ~1200x300)
+    //   <plugin root>/assets/webcursor-icon.png    (square logo, ~128x128)
+    property url bannerSource: Qt.resolvedUrl("../../assets/banner.png")
+    property url logoSource: Qt.resolvedUrl("../../assets/saki.png")
+
     visible: showing || opacity > 0
     opacity: showing ? 1 : 0
     enabled: showing
@@ -67,8 +73,8 @@ Item {
     // Modal card
     Rectangle {
         id: modal
-        width: Math.max(340, Math.min(720, parent.width - 80))
-        height: Math.max(360, Math.min(parent.height - 120, contentLayout.implicitHeight + 120))
+        width: Math.max(360, Math.min(880, parent.width - 80))
+        height: Math.max(360, Math.min(parent.height - 120, contentLayout.implicitHeight + 200))
         anchors.centerIn: parent
         radius: Style.radiusXLarge + 4
         clip: true
@@ -88,6 +94,18 @@ Item {
                 Layout.fillWidth: true
                 Layout.margins: Style.paddingLarge
                 Layout.leftMargin: Style.paddingXLarge
+                spacing: Style.spacingMedium
+
+                Image {
+                    Layout.preferredWidth: 40
+                    Layout.preferredHeight: 40
+                    Layout.alignment: Qt.AlignVCenter
+                    source: root.logoSource
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    asynchronous: true
+                    visible: status === Image.Ready
+                }
 
                 ColumnLayout {
                     Layout.fillWidth: true
@@ -112,6 +130,17 @@ Item {
                     type: IconButton.Text
                     onClicked: root.closeRequested()
                 }
+            }
+
+            // Banner artwork - sits below the logo/header row.
+            Image {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 140
+                source: root.bannerSource
+                fillMode: Image.PreserveAspectCrop
+                clip: true
+                asynchronous: true
+                visible: status === Image.Ready
             }
 
             // Scrollable content
@@ -187,15 +216,64 @@ Item {
 
                                 Item { Layout.fillWidth: true }
 
-                                Button {
-                                    text: root.buildingEffect ? qsTr("Building…") : qsTr("Build")
+                                // Build / Install — unified pill-style buttons.
+                                // (Plain Rectangle + MouseArea, not the QQC2
+                                // Button default style, so both look the same.)
+                                Rectangle {
+                                    id: buildBtn
+                                    implicitWidth: buildBtnText.implicitWidth + Style.paddingLarge * 2
+                                    implicitHeight: buildBtnText.implicitHeight + Style.paddingSmall * 2
+                                    radius: Style.radiusMedium
                                     enabled: root.sdkReady && !root.buildingEffect
-                                    onClicked: root.buildRequested()
+                                    opacity: enabled ? 1.0 : 0.5
+                                    color: colors ? colors.primaryContainer : Style.fallbackAccent
+                                    Behavior on opacity { NumberAnimation { duration: Style.animFast; easing.type: Easing.OutQuad } }
+
+                                    Text {
+                                        id: buildBtnText
+                                        anchors.centerIn: parent
+                                        text: root.buildingEffect ? qsTr("Building…") : qsTr("Build")
+                                        font.family: Style.fontFamily
+                                        font.pixelSize: Style.fontBody
+                                        font.weight: Font.Medium
+                                        color: colors ? colors.primaryContainerText : "#ffffff"
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        enabled: buildBtn.enabled
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.buildRequested()
+                                    }
                                 }
-                                Button {
-                                    text: root.installingEffect ? qsTr("Installing…") : qsTr("Install")
+                                Rectangle {
+                                    id: installBtn
+                                    implicitWidth: installBtnText.implicitWidth + Style.paddingLarge * 2
+                                    implicitHeight: installBtnText.implicitHeight + Style.paddingSmall * 2
+                                    radius: Style.radiusMedium
                                     enabled: root.artifactReady && !root.installingEffect
-                                    onClicked: root.installRequested()
+                                    opacity: enabled ? 1.0 : 0.5
+                                    color: colors ? colors.primaryContainer : Style.fallbackAccent
+                                    Behavior on opacity { NumberAnimation { duration: Style.animFast; easing.type: Easing.OutQuad } }
+
+                                    Text {
+                                        id: installBtnText
+                                        anchors.centerIn: parent
+                                        text: root.installingEffect ? qsTr("Installing…") : qsTr("Install")
+                                        font.family: Style.fontFamily
+                                        font.pixelSize: Style.fontBody
+                                        font.weight: Font.Medium
+                                        color: colors ? colors.primaryContainerText : "#ffffff"
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        enabled: installBtn.enabled
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.installRequested()
+                                    }
                                 }
                             }
 
